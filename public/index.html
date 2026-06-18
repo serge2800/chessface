@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="auth-view" id="authView">
+        <div class="brand-panel">
+          <p class="eyebrow">Random live chess</p>
+          <h1>Chess with a face across the board.</h1>
+          <p>Meet a random opponent, switch on video, and play a clean casual game without the heavy tournament feel.</p>
+          <div class="hero-stats" aria-label="Site highlights">
+            <span><strong>Live</strong> video</span>
+            <span><strong>1000</strong> start rating</span>
+          </div>
+          <div class="hero-actions">
+            <a class="hero-link-button" href="/rankings.html">View player rankings</a>
+          </div>
+          <div class="hero-showcase" aria-hidden="true">
+            <img src="assets/matchmaking-03.jpg" alt="" />
+            <img src="assets/matchmaking-12.jpg" alt="" />
+            <img src="assets/matchmaking-21.jpg" alt="" />
+          </div>
+        </div>
+
+        <form class="auth-card" id="authForm">
+          <div class="card-heading">
+            <p class="eyebrow">Start playing</p>
+            <h2>Create your player card</h2>
+          </div>
+          <div class="tabs">
+            <button type="button" class="tab active" data-mode="login">Log in</button>
+            <button type="button" class="tab" data-mode="signup">Sign up</button>
+          </div>
+          <div class="guest-entry">
+            <button class="guest-play" type="button" id="guestButton">Play instantly as guest</button>
+            <small>No account needed. Start now with a temporary guest number.</small>
+          </div>
+          <div class="signup-fields hidden" id="signupFields">
+            <label>
+              Your name
+              <input name="fullName" autocomplete="name" placeholder="Alex Morgan" minlength="2" />
+            </label>
+            <label>
+              Nickname
+              <input name="username" autocomplete="username" placeholder="blitzalex" minlength="3" />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              Verify email
+              <input name="emailConfirm" type="email" autocomplete="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              Date of birth
+              <input name="dateOfBirth" type="date" />
+            </label>
+            <label>
+              Country
+              <select name="countryCode">
+                <option value="US">United States</option>
+                <option value="AM">Armenia</option>
+                <option value="CA">Canada</option>
+                <option value="GB">United Kingdom</option>
+                <option value="FR">France</option>
+                <option value="DE">Germany</option>
+                <option value="ES">Spain</option>
+                <option value="IT">Italy</option>
+                <option value="RU">Russia</option>
+                <option value="CN">China</option>
+                <option value="IN">India</option>
+                <option value="IR">Iran</option>
+                <option value="BR">Brazil</option>
+                <option value="AU">Australia</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </label>
+          </div>
+          <label class="login-username" id="loginUsernameField">
+            Nickname
+            <input name="loginUsername" autocomplete="username" placeholder="blitzalex" required minlength="3" />
+          </label>
+          <label>
+            Password
+            <span class="password-field">
+              <input name="password" type="password" autocomplete="current-password" required minlength="6" />
+              <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password" title="Show password">
+                <span class="eye-icon" aria-hidden="true"></span>
+              </button>
+            </span>
+          </label>
+          <label id="avatarField" class="hidden">
+            Profile picture
+            <input name="avatar" type="file" accept="image/*" />
+          </label>
+          <button class="primary" type="submit" id="authSubmit">Log in</button>
+          <p class="notice" id="authNotice"></p>
+        </form>
+      </section>
+
+      <section class="marketing-view" id="marketingView">
+        <div class="section-kicker visual-kicker">
+          <p class="eyebrow">Why ChessFace</p>
+          <h2>It is chess, but with the person still in the room.</h2>
+          <p>
+            A fast chess table, a live face, a little humor, and enough safety controls to keep the game comfortable.
+          </p>
+        </div>
+
+        <div class="story-grid">
+          <article class="story-card story-card-large story-filters">
+            <div>
+              <p class="eyebrow">Face filters</p>
+              <h3>Laugh, then find the move.</h3>
+              <p>Use playful filters while you play so a random game feels more like sitting across from a real person.</p>
+            </div>
+          </article>
+
+          <article class="story-card story-matches">
+            <div>
+              <p class="eyebrow">Open tables</p>
+              <h3>Join who is waiting.</h3>
+              <p>See live one-on-one and team tables, then jump into the game you want.</p>
+            </div>
+          </article>
+
+          <article class="story-card story-mobile">
+            <div>
+              <p class="eyebrow">Mobile ready</p>
+              <h3>Your phone is enough.</h3>
+              <p>Open the browser, allow camera and mic, and play from the couch, cafe, or airport.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="feature-mosaic">
+          <article class="mosaic-card mosaic-safety">
+            <span>Video safety</span>
+            <strong>Hang up video, keep the game.</strong>
+          </article>
+          <article class="mosaic-card mosaic-rating">
+            <span>Ratings</span>
+            <strong>New players move faster, experienced players move steadier.</strong>
+          </article>
+          <article class="mosaic-card mosaic-history">
+            <span>Game review</span>
+            <strong>Replay the moves and analyze finished games.</strong>
+          </article>
+          <article class="mosaic-card mosaic-friends">
+            <span>Friends</span>
+            <strong>Add opponents, message friends, and challenge online players.</strong>
+          </article>
+        </div>
+      </section>
+
+      <button type="button" class="install-prompt hidden" id="installPrompt">Install ChessFace</button>
+
+      <section class="app-view hidden" id="appView">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">chessface.net</p>
+            <h2 id="statusTitle">Choose a time control</h2>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="profile" id="profileButton" title="Open game history">
+              <img id="myAvatar" alt="" />
+              <div>
+                <strong><span id="myCountryFlag"></span> <span id="myName"></span></strong>
+                <span id="myRating"></span>
+              </div>
+            </button>
+            <button type="button" class="ghost nav-action-button" id="rankingsButton" onclick="location.href = '/rankings.html'">Rankings</button>
+            <button type="button" class="ghost nav-action-button" id="settingsButton" onclick="document.querySelector('#settingsModal')?.classList.remove('hidden')">Settings</button>
+            <button type="button" class="ghost logout-button" id="logoutButton" onclick="localStorage.removeItem('chessface:token'); location.href = 'index.html'">Log out</button>
+          </div>
+        </header>
+
+        <section class="lobby" id="lobby">
+          <div class="lobby-heading">
+            <div>
+              <p class="eyebrow">Quick match</p>
+              <h3>Pick your clock</h3>
+            </div>
+            <span>Video-ready lobby</span>
+          </div>
+          <div class="time-controls">
+            <button class="time-card active" data-time="3+0">
+              <strong>3+0</strong>
+              <span>Fast and spicy</span>
+            </button>
+            <button class="time-card" data-time="3+2">
+              <strong>3+2</strong>
+              <span>Quick with increment</span>
+            </button>
+            <button class="time-card" data-time="5+0">
+              <strong>5+0</strong>
+              <span>Best default</span>
+            </button>
+            <button class="time-card" data-time="10+0">
+              <strong>10+0</strong>
+              <span>Room to think</span>
+            </button>
+          </div>
+          <button class="seek" id="seekButton">Seek game</button>
+          <button class="ghost" id="seekTeamButton">4-player team game</button>
+          <button class="ghost" id="playFriendButton">Play a friend</button>
+          <button class="ghost hidden" id="cancelSeekButton">Cancel seek</button>
+          <div class="friend-challenge-panel hidden" id="friendChallengePanel">
+            <div>
+              <strong>Online friends</strong>
+              <button type="button" class="ghost" id="closeFriendChallengeButton">Close</button>
+            </div>
+            <div class="online-friends-list" id="onlineFriendsList"></div>
+          </div>
+          <div class="challenge-box hidden" id="challengeBox">
+            <span id="challengeText"></span>
+            <button type="button" id="acceptChallengeButton">Accept</button>
+            <button type="button" id="declineChallengeButton">Decline</button>
+          </div>
+          <section class="open-challenges" aria-label="Open challenges">
+            <div class="open-challenges-head">
+              <div>
+                <p class="eyebrow">Open challenges</p>
+                <h3>Join a table</h3>
+              </div>
+              <span id="openChallengeCount">0 waiting</span>
+            </div>
+            <div class="open-challenge-list" id="openChallengeList">
+              <p class="muted-line">No open games yet. Create one and other players will see it here.</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="seeking-panel hidden" id="seekingPanel">
+          <div class="seeking-copy">
+            <p class="eyebrow">Finding opponent</p>
+            <h3 id="seekingTitle">Searching for a 5+0 match</h3>
+            <p>We are pairing you with another player who is ready to play face to face.</p>
+            <div class="search-pulse">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <button class="ghost" id="cancelSeekPanelButton">Cancel search</button>
+          </div>
+
+          <div class="search-visual">
+            <img class="preview-board-img" src="assets/normal-chessboard.svg" alt="Normal chessboard starting position" />
+
+            <div class="match-card">
+              <img id="matchmakingImage" src="assets/matchmaking-01.jpg" alt="AI-generated video chat pair preview" />
+              <div class="match-card-caption">
+                <strong>Scanning live players</strong>
+                <span id="matchmakingCaption">Checking video-ready opponents</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="game-layout hidden" id="gameLayout">
+          <section class="board-wrap">
+            <article class="board-player board-player-top">
+              <img id="blackAvatar" alt="" />
+              <div>
+                <strong><span id="blackFlag"></span> <span id="blackName"></span></strong>
+                <span id="blackRating"></span>
+                <span class="captured-row" id="blackCaptured"></span>
+              </div>
+              <b id="blackClock">00:00</b>
+            </article>
+            <div class="board" id="board"></div>
+            <article class="board-player board-player-bottom">
+              <img id="whiteAvatar" alt="" />
+              <div>
+                <strong><span id="whiteFlag"></span> <span id="whiteName"></span></strong>
+                <span id="whiteRating"></span>
+                <span class="captured-row" id="whiteCaptured"></span>
+              </div>
+              <b id="whiteClock">00:00</b>
+            </article>
+            <div class="board-meta" id="boardMeta">
+              <div class="turn-card">
+                <span id="gameStatus">Game started</span>
+                <strong id="playerColor"></strong>
+              </div>
+              <button type="button" class="turn-alarm hidden" id="turnAlarmButton">Your turn</button>
+            </div>
+            <div class="team-roster hidden" id="teamRoster" aria-label="Team game players"></div>
+            <div class="actions">
+              <button id="offerDrawButton">Offer draw</button>
+              <button id="abortGameButton">Abort game</button>
+              <button id="resignButton" class="danger">Resign</button>
+              <button id="addOpponentButton">Send friend request</button>
+              <button id="analyzeFinishedGameButton" class="hidden">Analyze game</button>
+              <button id="newGameButton" class="hidden">New game</button>
+            </div>
+            <div class="draw-box hidden" id="drawBox">
+              <span id="drawText">Opponent offered a draw.</span>
+              <button id="acceptDrawButton">Accept</button>
+              <button id="declineDrawButton">Decline</button>
+            </div>
+          </section>
+
+          <aside class="video-panel">
+            <div class="video-grid" id="videoGrid">
+              <div class="video-tile remote-video-tile" data-peer-slot="primary">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <span id="remoteVideoLabel">Opponent</span>
+              </div>
+              <div class="video-tile local-video-tile" data-peer-id="self">
+                <video id="localVideo" autoplay playsinline muted></video>
+                <span id="localVideoLabel">You</span>
+              </div>
+            </div>
+            <label class="filter-actions" aria-label="Face filters">
+              <span>Face filter</span>
+              <select id="faceFilterSelect">
+                <option value="none">No filter</option>
+                <option value="glasses">Clear glasses</option>
+                <option value="sunglasses">Sunglasses</option>
+                <option value="party-glasses">Party glasses</option>
+                <option value="hat">Top hat</option>
+                <option value="crown">Crown</option>
+                <option value="halo">Halo</option>
+                <option value="strawberry">Strawberry face</option>
+                <option value="cat">Cat ears and nose</option>
+                <option value="bunny">Bunny ears</option>
+                <option value="mustache">Mustache</option>
+                <option value="pirate">Pirate patch</option>
+                <option value="robot">Robot visor</option>
+                <option value="sparkles">Sparkles</option>
+              </select>
+            </label>
+            <div class="media-actions">
+              <button id="micButton">Mute me</button>
+              <button id="opponentMuteButton">Mute opponent</button>
+              <button id="cameraButton">Camera off</button>
+              <button id="hangupVideoButton" class="danger">Hang up video call</button>
+              <button id="requestVideoButton" class="hidden">Request video back</button>
+              <button id="acceptVideoButton" class="hidden">Accept video</button>
+              <button id="declineVideoButton" class="hidden">Decline</button>
+            </div>
+            <details class="video-debug" id="videoDebug">
+              <summary>Video debug</summary>
+              <pre id="videoDebugText">Waiting for video...</pre>
+            </details>
+            <section class="game-chat" aria-label="Game chat">
+              <div class="game-chat-head">
+                <div>
+                  <p class="eyebrow">Text chat</p>
+                  <h3>During the game</h3>
+                </div>
+                <span id="chatStatus">Live</span>
+              </div>
+              <div class="game-chat-messages" id="gameChatMessages" aria-live="polite">
+                <p class="chat-empty">Say hi, ask for a rematch, or just enjoy the game.</p>
+              </div>
+              <form class="game-chat-form" id="gameChatForm">
+                <input id="gameChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." />
+                <button type="button" class="emoji-toggle" id="emojiToggle" aria-label="Add emoji">☺</button>
+                <button type="submit">Send</button>
+              </form>
+              <div class="emoji-panel hidden" id="emojiPanel" aria-label="Emoji picker"></div>
+            </section>
+          </aside>
+        </section>
+      </section>
+
+      <section class="game-result-modal hidden" id="gameResultModal" aria-label="Game result" aria-modal="true" role="dialog">
+        <div class="game-result-card">
+          <p class="eyebrow" id="gameResultReason">Game over</p>
+          <h2 id="gameResultTitle">You won</h2>
+          <div class="game-result-score" id="gameResultScore">1-0</div>
+          <p id="gameResultDetails">Checkmate</p>
+          <div class="game-result-actions">
+            <button type="button" class="primary" id="gameResultNewGameButton">New game</button>
+            <button type="button" class="ghost" id="gameResultCloseButton">Close</button>
+          </div>
+        </div>
+      </section>
+
+      <button type="button" class="mobile-debug-button hidden" id="mobileVideoDebugButton">Video debug</button>
+      <section class="video-debug-modal hidden" id="videoDebugModal" aria-label="Video debug" aria-modal="true" role="dialog">
+        <div class="video-debug-card">
+          <div class="video-debug-card-head">
+            <div>
+              <p class="eyebrow">LiveKit</p>
+              <h2>Video debug</h2>
+            </div>
+            <button type="button" class="ghost icon-button" id="closeVideoDebugButton" aria-label="Close video debug">x</button>
+          </div>
+          <pre id="videoDebugModalText">Waiting for video...</pre>
+        </div>
+      </section>
+
+      <section class="settings-modal hidden" id="settingsModal" aria-label="ChessFace settings">
+        <div class="settings-card">
+          <div class="settings-head">
+            <div>
+              <p class="eyebrow">Settings</p>
+              <h2>Board and play</h2>
+            </div>
+            <button type="button" class="ghost icon-button" id="closeSettingsButton" aria-label="Close settings">×</button>
+          </div>
+
+          <div class="board-choice-panel">
+            <span>Board style</span>
+            <div class="board-choice-grid" role="radiogroup" aria-label="Board style">
+              <button type="button" class="board-choice active" data-board-theme="green" aria-pressed="true">
+                <span class="board-swatch board-swatch-green"></span>
+                <strong>Green</strong>
+              </button>
+              <button type="button" class="board-choice" data-board-theme="wood" aria-pressed="false">
+                <span class="board-swatch board-swatch-wood"></span>
+                <strong>Wood</strong>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <label class="toggle-row">
+              <span>Highlight last move</span>
+              <input id="highlightMovesSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Show legal moves</span>
+              <input id="legalMovesSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Show board coordinates</span>
+              <input id="coordinatesSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Move sound</span>
+              <input id="moveSoundSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Show captured pieces</span>
+              <input id="capturedPiecesSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Confirm resign and draw</span>
+              <input id="confirmActionsSetting" type="checkbox" />
+            </label>
+            <label class="toggle-row">
+              <span>Allow friend challenges</span>
+              <input id="allowChallengesSetting" type="checkbox" />
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="pieces.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

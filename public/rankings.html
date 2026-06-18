@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace Rankings</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="rankings-page">
+    <main class="rankings-shell">
+      <header class="topbar rankings-nav">
+        <div>
+          <p class="eyebrow">chessface.net</p>
+          <h2>Rankings</h2>
+        </div>
+        <nav class="topbar-actions" aria-label="Main navigation">
+          <a class="ghost nav-action-button" href="/">Dashboard</a>
+          <a class="ghost nav-action-button active" href="/rankings.html" aria-current="page">Rankings</a>
+          <a class="ghost nav-action-button hidden" href="/profile.html" id="rankingsProfileLink">Profile</a>
+          <button type="button" class="ghost logout-button hidden" id="rankingsLogoutButton">Log out</button>
+          <a class="hero-link-button" href="/" id="rankingsLoginLink">Log in</a>
+        </nav>
+      </header>
+
+      <section class="rankings-hero">
+        <div>
+          <p class="eyebrow">Public leaderboard</p>
+          <h1>ChessFace player rankings</h1>
+          <p>See the current rating table for registered ChessFace players.</p>
+        </div>
+        <div class="rankings-actions">
+          <a class="hero-link-button" href="/">Start playing</a>
+          <button type="button" class="ghost logout-button" id="refreshRankingsButton">Refresh</button>
+        </div>
+      </section>
+
+      <section class="rankings-summary" aria-label="Ranking summary">
+        <article>
+          <span>Players</span>
+          <strong id="rankingTotal">0</strong>
+        </article>
+        <article>
+          <span>Online now</span>
+          <strong id="rankingOnline">0</strong>
+        </article>
+        <article>
+          <span>Top rating</span>
+          <strong id="rankingTop">-</strong>
+        </article>
+      </section>
+
+      <section class="rankings-board">
+        <div class="rankings-board-head">
+          <div>
+            <p class="eyebrow">Top players</p>
+            <h2>Rating list</h2>
+          </div>
+          <span id="rankingsUpdated">Loading...</span>
+        </div>
+        <div class="rankings-list" id="rankingsList">
+          <div class="ranking-empty">Loading rankings...</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="rankings.js"></script>
+  </body>
+</html>

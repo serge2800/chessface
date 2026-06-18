@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace Friends</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="profile-page">
+    <main class="profile-shell">
+      <section class="profile-hero">
+        <div>
+          <p class="eyebrow">Friend list</p>
+          <h1>Players you follow</h1>
+          <p id="friendsMeta"></p>
+        </div>
+        <button type="button" class="ghost logout-button" id="dashboardButton">Back to dashboard</button>
+        <form class="friend-add" id="friendForm">
+          <input name="username" placeholder="Search by name or username" required />
+          <button class="primary" type="submit">Send request</button>
+          <p class="notice" id="friendNotice"></p>
+        </form>
+      </section>
+
+      <section class="request-panel hidden" id="requestPanel"></section>
+
+      <section class="friends-layout">
+        <section class="friends-grid" id="friendsGrid"></section>
+        <aside class="message-panel" id="messagePanel">
+          <p>Select a friend to open messages.</p>
+        </aside>
+      </section>
+    </main>
+
+    <script src="friends.js"></script>
+  </body>
+</html>

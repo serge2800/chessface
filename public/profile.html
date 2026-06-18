@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace Profile</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="profile-page">
+    <main class="profile-shell">
+      <section class="profile-hero">
+        <div class="profile-identity">
+          <img id="profileAvatar" alt="" />
+          <div>
+            <p class="eyebrow">Player profile</p>
+            <h1><span id="profileFlag"></span> <span id="profileName">ChessFace</span></h1>
+            <p id="profileMeta"></p>
+            <div class="profile-facts">
+              <span id="profileOnline">Offline</span>
+              <span id="profileCountry">United States</span>
+              <span id="profileJoined">Joined today</span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-side">
+          <div class="profile-stats">
+            <span>Rating <strong id="profileRating">1000</strong></span>
+            <span>Games <strong id="profileGames">0</strong></span>
+            <span>Friends <strong id="profileFriends">0</strong></span>
+            <span>RD <strong id="profileRd">350</strong></span>
+          </div>
+          <div class="profile-actions">
+            <button type="button" class="ghost logout-button" id="dashboardButton">Back to dashboard</button>
+            <button type="button" class="ghost logout-button" id="friendsButton">Friend list</button>
+            <button type="button" class="ghost logout-button" id="editProfileButton">Edit profile</button>
+            <button type="button" class="ghost logout-button" id="profileLogoutButton">Log out</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="history-grid">
+        <div>
+          <section class="stats-panel">
+            <div>
+              <p class="eyebrow">Rating statistics</p>
+              <h2 id="statsTitle">3+0 rating</h2>
+            </div>
+            <div class="stats-tabs" id="statsTabs">
+              <button class="active" data-time="3+0">3+0</button>
+              <button data-time="3+2">3+2</button>
+              <button data-time="5+0">5+0</button>
+              <button data-time="10+0">10+0</button>
+            </div>
+            <div class="chart-wrap">
+              <svg id="ratingChart" viewBox="0 0 720 260" role="img" aria-label="Rating progress chart"></svg>
+            </div>
+          </section>
+          <p class="eyebrow">Games played</p>
+          <div class="game-list" id="gameList"></div>
+        </div>
+        <aside class="review-panel" id="reviewPanel">
+          <p>Select a game to review the record.</p>
+        </aside>
+      </section>
+    </main>
+
+    <script src="pieces.js"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>
