@@ -1,4 +1,4 @@
-const CACHE_NAME = "chessface-shell-v57";
+const CACHE_NAME = "chessface-shell-v58";
 const NETWORK_FIRST_PATHS = new Set([
   "/",
   "/index.html",
@@ -28,8 +28,6 @@ const SHELL_ASSETS = [
   "/app-icon.svg",
   "/assets/chess-hero.png",
   "/assets/normal-chessboard.svg",
-  "/assets/chessface-filters-duel.png",
-  "/assets/chessface-group-filters.png",
   "/assets/chessface-mobile-play.png"
 ];
 

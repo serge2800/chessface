@@ -62,7 +62,6 @@ const emojiToggle = document.querySelector("#emojiToggle");
 const emojiPanel = document.querySelector("#emojiPanel");
 const chatStatus = document.querySelector("#chatStatus");
 const teamRoster = document.querySelector("#teamRoster");
-const faceFilterSelect = document.querySelector("#faceFilterSelect");
 const profileButton = document.querySelector("#profileButton");
 const logoutButton = document.querySelector("#logoutButton");
 const settingsButton = document.querySelector("#settingsButton");
@@ -82,8 +81,9 @@ const gameResultReason = document.querySelector("#gameResultReason");
 const gameResultTitle = document.querySelector("#gameResultTitle");
 const gameResultScore = document.querySelector("#gameResultScore");
 const gameResultDetails = document.querySelector("#gameResultDetails");
-const gameResultCloseButton = document.querySelector("#gameResultCloseButton");
-const gameResultNewGameButton = document.querySelector("#gameResultNewGameButton");
+const gameResultRematchButton = document.querySelector("#gameResultRematchButton");
+const gameResultContinueVideoButton = document.querySelector("#gameResultContinueVideoButton");
+const gameResultEndCallButton = document.querySelector("#gameResultEndCallButton");
 
 const pieceMap = {
   p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚",
@@ -112,7 +112,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-18-livekit-debug-v57";
+const APP_VERSION = "2026-06-21-postgame-video-v58";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -128,6 +128,8 @@ let socket;
 let me;
 let selectedTime = "5+0";
 let currentGame;
+let postGameVideoTimer;
+let postGameTimeControl = "5+0";
 let selectedSquare;
 let dragMove;
 let noticeTimer;
@@ -167,15 +169,7 @@ let pendingChallengeId;
 let openChallenges = { normal: [], team: [] };
 let meAudioMuted = false;
 let opponentAudioMuted = false;
-let currentFaceFilter = "none";
-let rawLocalVideo;
 let filteredLocalStream;
-let filterCanvas;
-let filterContext;
-let filterAnimationId;
-let faceLandmarker;
-let faceLandmarkerPromise;
-let lastFaceBox;
 let deferredInstallPrompt;
 let gameChat = [];
 let shownResultDialogKey = "";
@@ -206,9 +200,33 @@ matchmakingSlides.forEach((slide) => {
 
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 
+function forceFreshBuildWhenVersionChanges() {
+  const versionKey = "chessface:app-version";
+  const reloadKey = `chessface:reloaded:${APP_VERSION}`;
+  const previousVersion = localStorage.getItem(versionKey);
+  localStorage.setItem(versionKey, APP_VERSION);
+  if (!previousVersion || previousVersion === APP_VERSION || sessionStorage.getItem(reloadKey)) return;
+
+  sessionStorage.setItem(reloadKey, "1");
+  const refreshUrl = new URL(window.location.href);
+  refreshUrl.searchParams.set("v", APP_VERSION);
+  const refresh = () => window.location.replace(refreshUrl.toString());
+
+  if (!("serviceWorker" in navigator)) {
+    refresh();
+    return;
+  }
+
+  navigator.serviceWorker.getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister().catch(() => null))))
+    .finally(refresh);
+}
+
+forceFreshBuildWhenVersionChanges();
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+    navigator.serviceWorker.register(`/service-worker.js?v=${encodeURIComponent(APP_VERSION)}`).catch(() => {});
   });
 }
 
@@ -406,8 +424,9 @@ document.querySelector(".board-player-bottom").addEventListener("click", (event)
   if (event.currentTarget.dataset.isOpponent === "true" && currentGame?.status === "playing") addCurrentOpponent();
 });
 document.querySelector("#newGameButton").addEventListener("click", resetToLobby);
-gameResultCloseButton?.addEventListener("click", () => gameResultModal?.classList.add("hidden"));
-gameResultNewGameButton?.addEventListener("click", resetToLobby);
+gameResultRematchButton?.addEventListener("click", requestPostGameRematch);
+gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTemporarily);
+gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
 mobileVideoDebugButton?.addEventListener("click", () => {
   updateVideoDebug();
   videoDebugModal?.classList.remove("hidden");
@@ -418,9 +437,6 @@ videoDebugModal?.addEventListener("click", (event) => {
 });
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
-faceFilterSelect?.addEventListener("change", () => {
-  applyFaceFilterSelection(faceFilterSelect.value);
-});
 document.querySelector("#cameraButton").addEventListener("click", toggleCamera);
 document.querySelector("#hangupVideoButton").addEventListener("click", hangupVideoCall);
 document.querySelector("#requestVideoButton").addEventListener("click", () => socket.emit("video:request"));
@@ -879,13 +895,13 @@ function renderGame(game) {
   document.querySelector("#newGameButton").classList.toggle("hidden", game.status === "playing");
 
   if (game.status === "finished") {
+    postGameTimeControl = game.timeControl || postGameTimeControl || selectedTime;
     maybeShowGameResultDialog(game);
     if (game.kind !== "team") {
       me.rating = game.color === "white" ? game.players.white.rating : game.players.black.rating;
       me.gamesPlayed = (me.gamesPlayed || 0) + 1;
       document.querySelector("#myRating").textContent = `${me.rating} rating · ${me.gamesPlayed} games`;
     }
-    closePeer();
   }
 }
 
@@ -925,6 +941,40 @@ function gameResultScoreText(result) {
   if (result === "black") return "0-1";
   if (result === "draw") return "1/2-1/2";
   return "*";
+}
+
+function clearPostGameVideoTimer() {
+  clearTimeout(postGameVideoTimer);
+  postGameVideoTimer = null;
+}
+
+function requestPostGameRematch() {
+  gameResultModal?.classList.add("hidden");
+  clearPostGameVideoTimer();
+  const timeControl = postGameTimeControl || currentGame?.timeControl || selectedTime || "5+0";
+  selectedTime = timeControl;
+  resetToLobby();
+  timeButtons.forEach((button) => button.classList.toggle("active", button.dataset.time === timeControl));
+  socket?.emit("queue:join", timeControl);
+  showSeeking(timeControl);
+}
+
+function continuePostGameVideoTemporarily() {
+  gameResultModal?.classList.add("hidden");
+  clearPostGameVideoTimer();
+  showNotice("Video will stay on for 2 minutes. Rematch stays available.");
+  postGameVideoTimer = setTimeout(() => {
+    if (!currentGame || currentGame.status !== "finished") return;
+    closePeer();
+    markVideoOffLocally();
+    showNotice("Post-game video ended. You can still start a rematch.");
+  }, 120000);
+}
+
+function endPostGameAndCall() {
+  clearPostGameVideoTimer();
+  gameResultModal?.classList.add("hidden");
+  resetToLobby();
 }
 
 function playerTurnText(game) {
@@ -1010,11 +1060,12 @@ function renderVideoControls(game) {
   renderVideoTiles(game);
   const requestFromMe = game.videoRequestFrom === me.id;
   const requestFromOpponent = game.videoRequestFrom && game.videoRequestFrom !== me.id;
-  mobileVideoDebugButton?.classList.toggle("hidden", game.status !== "playing");
-  document.querySelector("#hangupVideoButton").classList.toggle("hidden", game.videoOff || game.status !== "playing");
-  opponentMuteButton.classList.toggle("hidden", game.videoOff || game.status !== "playing");
-  micButton.classList.toggle("hidden", game.videoOff || game.status !== "playing");
-  document.querySelector("#cameraButton").classList.toggle("hidden", game.videoOff || game.status !== "playing");
+  const videoCanStayOpen = game.status === "playing" || game.status === "finished";
+  mobileVideoDebugButton?.classList.toggle("hidden", !videoCanStayOpen);
+  document.querySelector("#hangupVideoButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
+  opponentMuteButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
+  micButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
+  document.querySelector("#cameraButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   document.querySelector("#requestVideoButton").classList.toggle("hidden", !game.videoOff || requestFromMe || requestFromOpponent || game.status !== "playing");
   const acceptVideoButton = document.querySelector("#acceptVideoButton");
   acceptVideoButton.classList.toggle("hidden", !requestFromOpponent);
@@ -1338,6 +1389,7 @@ function startPieceDrag(event, square, piece) {
 
   const pieceImage = event.currentTarget.querySelector(".piece-img");
   if (!pieceImage) return;
+  const pieceRect = pieceImage.getBoundingClientRect();
   if (dragMove) finishPieceDrag();
   event.preventDefault();
   event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -1352,6 +1404,10 @@ function startPieceDrag(event, square, piece) {
     moved: false,
     wasSelected,
     source: event.currentTarget,
+    offsetX: event.clientX - pieceRect.left,
+    offsetY: event.clientY - pieceRect.top,
+    ghostWidth: pieceRect.width,
+    ghostHeight: pieceRect.height,
     ghost: null
   };
   dragMove.source.classList.add("dragging-source", "selected");
@@ -1369,6 +1425,8 @@ function dragPiece(event) {
     dragMove.moved = true;
     dragMove.ghost = renderPieceImage(dragMove.piece);
     dragMove.ghost.classList.add("piece-drag-ghost");
+    dragMove.ghost.style.width = `${dragMove.ghostWidth}px`;
+    dragMove.ghost.style.height = `${dragMove.ghostHeight}px`;
     document.body.append(dragMove.ghost);
   }
   moveDragGhost(event.clientX, event.clientY);
@@ -1447,8 +1505,8 @@ function showMoveBlockedNotice(piece) {
 
 function moveDragGhost(clientX, clientY) {
   if (!dragMove?.ghost) return;
-  dragMove.ghost.style.left = `${clientX}px`;
-  dragMove.ghost.style.top = `${clientY}px`;
+  dragMove.ghost.style.left = `${clientX - dragMove.offsetX}px`;
+  dragMove.ghost.style.top = `${clientY - dragMove.offsetY}px`;
 }
 
 function highlightDragTarget(square) {
@@ -2348,49 +2406,10 @@ function sendSignal(peerId, signal) {
   socket.emit("webrtc:signal", { gameId: currentGame.id, to: peerId, signal });
 }
 
-async function createFilteredStream(sourceStream) {
-  const videoTrack = sourceStream.getVideoTracks()[0];
-  if (!videoTrack || !HTMLCanvasElement.prototype.captureStream) return sourceStream;
-
-  rawLocalVideo = document.createElement("video");
-  rawLocalVideo.muted = true;
-  rawLocalVideo.playsInline = true;
-  rawLocalVideo.setAttribute("playsinline", "");
-  rawLocalVideo.setAttribute("webkit-playsinline", "");
-  rawLocalVideo.setAttribute("muted", "");
-  rawLocalVideo.srcObject = sourceStream;
-  await rawLocalVideo.play().catch(() => {});
-  await waitForVideoReady(rawLocalVideo);
-
-  filterCanvas = document.createElement("canvas");
-  filterContext = filterCanvas.getContext("2d");
-  filterCanvas.width = VIDEO_OUTPUT_WIDTH;
-  filterCanvas.height = VIDEO_OUTPUT_HEIGHT;
-  const canvasStream = filterCanvas.captureStream(VIDEO_FRAME_RATE);
-  const canvasVideoTrack = canvasStream.getVideoTracks()[0];
-  if (canvasVideoTrack) canvasVideoTrack.contentHint = "motion";
-  sourceStream.getAudioTracks().forEach((track) => canvasStream.addTrack(track));
-  startFilterLoop();
-  return canvasStream;
-}
-
 async function buildOutgoingMediaStream(sourceStream) {
+  stopFilterRenderer();
   stopFilteredStream();
-  if (currentFaceFilter === "none") {
-    stopFilterRenderer();
-    return sourceStream;
-  }
-  await loadFaceLandmarker().catch(() => null);
-  filteredLocalStream = await createFilteredStream(sourceStream);
-  return filteredLocalStream;
-}
-
-async function applyFaceFilterSelection(value) {
-  currentFaceFilter = value || "none";
-  if (currentFaceFilter !== "none") loadFaceLandmarker().catch(() => {});
-  if (!currentGame || currentGame.status !== "playing" || currentGame.videoOff || !rawLocalStream) return;
-  showNotice(currentFaceFilter === "none" ? "Face filter cleared." : "Applying face filter...");
-  await restartMediaPipeline();
+  return sourceStream;
 }
 
 async function restartMediaPipeline() {
@@ -2414,7 +2433,7 @@ async function restartMediaPipeline() {
   });
   applyLocalAudioState();
   setLiveKitState({ localVideoPublished: Boolean(nextVideoTrack) });
-  showNotice(currentFaceFilter === "none" ? "Face filter cleared." : "Face filter applied.");
+  showNotice("Camera updated.");
 }
 
 async function replaceOutgoingVideoTrack(videoTrack) {
@@ -2471,12 +2490,6 @@ function stopFilteredStream() {
 }
 
 function stopFilterRenderer() {
-  cancelAnimationFrame(filterAnimationId);
-  filterAnimationId = null;
-  rawLocalVideo = null;
-  filterCanvas = null;
-  filterContext = null;
-  lastFaceBox = null;
 }
 
 function stopLocalMedia() {
@@ -2503,583 +2516,6 @@ function waitForVideoReady(video) {
     video.addEventListener("canplay", done, { once: true });
     window.setTimeout(done, 1200);
   });
-}
-
-function startFilterLoop() {
-  cancelAnimationFrame(filterAnimationId);
-  const draw = () => {
-    drawFilteredFrame();
-    filterAnimationId = requestAnimationFrame(draw);
-  };
-  draw();
-}
-
-function drawFilteredFrame() {
-  if (!rawLocalVideo || !filterCanvas || !filterContext) return;
-  const width = VIDEO_OUTPUT_WIDTH;
-  const height = VIDEO_OUTPUT_HEIGHT;
-  if (filterCanvas.width !== width || filterCanvas.height !== height) {
-    filterCanvas.width = width;
-    filterCanvas.height = height;
-  }
-  if (rawLocalVideo.readyState < 2) {
-    filterContext.fillStyle = "#050708";
-    filterContext.fillRect(0, 0, width, height);
-    return;
-  }
-  drawVideoCover(filterContext, rawLocalVideo, width, height);
-  if (currentFaceFilter === "none") return;
-
-  const faceBox = detectFaceBox(width, height);
-  drawFaceFilter(filterContext, faceBox, currentFaceFilter);
-}
-
-function drawVideoCover(ctx, video, width, height) {
-  const sourceWidth = video.videoWidth || width;
-  const sourceHeight = video.videoHeight || height;
-  const sourceRatio = sourceWidth / sourceHeight;
-  const targetRatio = width / height;
-  let cropWidth = sourceWidth;
-  let cropHeight = sourceHeight;
-  let cropX = 0;
-  let cropY = 0;
-
-  if (sourceRatio > targetRatio) {
-    cropWidth = sourceHeight * targetRatio;
-    cropX = (sourceWidth - cropWidth) / 2;
-  } else {
-    cropHeight = sourceWidth / targetRatio;
-    cropY = (sourceHeight - cropHeight) / 2;
-  }
-
-  ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height);
-}
-
-function detectFaceBox(width, height) {
-  if (faceLandmarker && rawLocalVideo?.readyState >= 2) {
-    try {
-      const results = faceLandmarker.detectForVideo(rawLocalVideo, performance.now());
-      const landmarks = results.faceLandmarks?.[0];
-      if (landmarks?.length) {
-        const xs = landmarks.map((point) => point.x * width);
-        const ys = landmarks.map((point) => point.y * height);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-        const faceWidth = maxX - minX;
-        const faceHeight = maxY - minY;
-        const leftEye = midpoint(
-          landmarkPoint(landmarks, 33, width, height),
-          landmarkPoint(landmarks, 133, width, height)
-        );
-        const rightEye = midpoint(
-          landmarkPoint(landmarks, 362, width, height),
-          landmarkPoint(landmarks, 263, width, height)
-        );
-        const eyeCenter = midpoint(leftEye, rightEye);
-        const eyeDistance = distance(leftEye, rightEye) || faceWidth * 0.45;
-        const mouthLeft = landmarkPoint(landmarks, 61, width, height);
-        const mouthRight = landmarkPoint(landmarks, 291, width, height);
-        lastFaceBox = {
-          x: minX,
-          y: minY,
-          width: faceWidth,
-          height: faceHeight,
-          cx: minX + faceWidth / 2,
-          cy: minY + faceHeight / 2,
-          leftEye,
-          rightEye,
-          eyeCenter,
-          eyeDistance,
-          angle: Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x),
-          forehead: landmarkPoint(landmarks, 10, width, height),
-          chin: landmarkPoint(landmarks, 152, width, height),
-          nose: landmarkPoint(landmarks, 1, width, height),
-          mouth: midpoint(landmarkPoint(landmarks, 13, width, height), landmarkPoint(landmarks, 14, width, height)),
-          mouthLeft,
-          mouthRight,
-          mouthWidth: distance(mouthLeft, mouthRight) || eyeDistance * 0.86
-        };
-        return lastFaceBox;
-      }
-    } catch {
-      // Keep the previous box or centered fallback if frame analysis fails.
-    }
-  }
-  return lastFaceBox || fallbackFaceBox(width, height);
-}
-
-function fallbackFaceBox(width, height) {
-  const box = {
-    x: width * 0.31,
-    y: height * 0.18,
-    width: width * 0.38,
-    height: height * 0.5,
-    cx: width / 2,
-    cy: height * 0.43,
-    angle: 0
-  };
-  box.eyeDistance = box.width * 0.52;
-  box.eyeCenter = { x: box.cx, y: box.y + box.height * 0.42 };
-  box.leftEye = { x: box.eyeCenter.x - box.eyeDistance / 2, y: box.eyeCenter.y };
-  box.rightEye = { x: box.eyeCenter.x + box.eyeDistance / 2, y: box.eyeCenter.y };
-  box.forehead = { x: box.cx, y: box.y + box.height * 0.06 };
-  box.chin = { x: box.cx, y: box.y + box.height };
-  box.nose = { x: box.cx, y: box.y + box.height * 0.56 };
-  box.mouth = { x: box.cx, y: box.y + box.height * 0.72 };
-  box.mouthLeft = { x: box.cx - box.eyeDistance * 0.38, y: box.mouth.y };
-  box.mouthRight = { x: box.cx + box.eyeDistance * 0.38, y: box.mouth.y };
-  box.mouthWidth = box.eyeDistance * 0.76;
-  return box;
-}
-
-function landmarkPoint(landmarks, index, width, height) {
-  const point = landmarks[index];
-  return point ? { x: point.x * width, y: point.y * height } : { x: width / 2, y: height / 2 };
-}
-
-function midpoint(a, b) {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-async function loadFaceLandmarker() {
-  if (faceLandmarker) return faceLandmarker;
-  if (faceLandmarkerPromise) return faceLandmarkerPromise;
-  faceLandmarkerPromise = import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm")
-    .then(async ({ FaceLandmarker, FilesetResolver }) => {
-      const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
-      faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-          delegate: "GPU"
-        },
-        runningMode: "VIDEO",
-        numFaces: 1
-      });
-      return faceLandmarker;
-    })
-    .catch((error) => {
-      console.warn("Face tracking unavailable; using centered filters.", error);
-      faceLandmarkerPromise = null;
-      return null;
-    });
-  return faceLandmarkerPromise;
-}
-
-function drawFaceFilter(ctx, box, type) {
-  switch (type) {
-    case "glasses":
-      drawGlassesFilter(ctx, box, "clear");
-      break;
-    case "sunglasses":
-      drawGlassesFilter(ctx, box, "dark");
-      break;
-    case "party-glasses":
-      drawPartyGlassesFilter(ctx, box);
-      break;
-    case "hat":
-      drawHatFilter(ctx, box);
-      break;
-    case "crown":
-      drawCrownFilter(ctx, box);
-      break;
-    case "halo":
-      drawHaloFilter(ctx, box);
-      break;
-    case "strawberry":
-      drawStrawberryFilter(ctx, box);
-      break;
-    case "cat":
-      drawCatFilter(ctx, box);
-      break;
-    case "bunny":
-      drawBunnyFilter(ctx, box);
-      break;
-    case "mustache":
-      drawMustacheFilter(ctx, box);
-      break;
-    case "pirate":
-      drawPirateFilter(ctx, box);
-      break;
-    case "robot":
-      drawRobotFilter(ctx, box);
-      break;
-    case "sparkles":
-      drawSparklesFilter(ctx, box);
-      break;
-  }
-}
-
-function drawStrawberryFilter(ctx, box) {
-  const radius = box.width * 0.62;
-  const top = box.forehead.y - radius * 0.34;
-  ctx.save();
-  ctx.translate(box.cx, top + radius * 0.56);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "rgba(222, 42, 60, 0.82)";
-  ctx.strokeStyle = "rgba(90, 8, 20, 0.7)";
-  ctx.lineWidth = Math.max(4, box.width * 0.035);
-  ctx.beginPath();
-  ctx.moveTo(0, radius * 0.92);
-  ctx.bezierCurveTo(-radius * 0.96, radius * 0.28, -radius * 0.7, -radius * 0.75, 0, -radius * 0.56);
-  ctx.bezierCurveTo(radius * 0.7, -radius * 0.75, radius * 0.96, radius * 0.28, 0, radius * 0.92);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "#fff4b8";
-  for (let row = -2; row <= 3; row += 1) {
-    for (let col = -2; col <= 2; col += 1) {
-      if (Math.abs(col) + Math.abs(row) > 4) continue;
-      ctx.beginPath();
-      ctx.ellipse(col * radius * 0.2, row * radius * 0.18, radius * 0.028, radius * 0.052, 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  ctx.fillStyle = "#46b963";
-  for (let i = -2; i <= 2; i += 1) {
-    ctx.save();
-    ctx.rotate(i * 0.42);
-    ctx.beginPath();
-    ctx.moveTo(0, -radius * 0.62);
-    ctx.lineTo(radius * 0.16, -radius * 1.02);
-    ctx.lineTo(-radius * 0.16, -radius * 0.96);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-  drawEyes(ctx, radius);
-  ctx.restore();
-}
-
-function drawEyes(ctx, radius) {
-  [-0.28, 0.28].forEach((offset) => {
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.ellipse(offset * radius, -radius * 0.05, radius * 0.13, radius * 0.17, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#171717";
-    ctx.beginPath();
-    ctx.arc(offset * radius + radius * 0.03, -radius * 0.02, radius * 0.055, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-function drawHatFilter(ctx, box) {
-  const width = box.eyeDistance * 2.1;
-  const height = box.eyeDistance * 0.96;
-  ctx.save();
-  ctx.translate(box.forehead.x, box.forehead.y - height * 0.66);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "#171717";
-  ctx.strokeStyle = "#050505";
-  ctx.lineWidth = Math.max(4, box.width * 0.035);
-  roundRect(ctx, -width * 0.26, -height * 0.46, width * 0.52, height * 0.9, 10);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#101010";
-  roundRect(ctx, -width * 0.5, height * 0.18, width, height * 0.28, 999);
-  ctx.fill();
-  ctx.fillStyle = "#d8b35a";
-  ctx.fillRect(-width * 0.24, height * 0.02, width * 0.48, height * 0.12);
-  ctx.restore();
-}
-
-function drawCrownFilter(ctx, box) {
-  const width = box.eyeDistance * 1.92;
-  const height = box.eyeDistance * 0.68;
-  ctx.save();
-  ctx.translate(box.forehead.x, box.forehead.y - height * 0.42);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "#f2c66d";
-  ctx.strokeStyle = "#704a0d";
-  ctx.lineWidth = Math.max(3, box.width * 0.025);
-  ctx.beginPath();
-  ctx.moveTo(-width / 2, height * 0.35);
-  ctx.lineTo(-width * 0.4, -height * 0.35);
-  ctx.lineTo(-width * 0.2, height * 0.06);
-  ctx.lineTo(0, -height * 0.55);
-  ctx.lineTo(width * 0.2, height * 0.06);
-  ctx.lineTo(width * 0.4, -height * 0.35);
-  ctx.lineTo(width / 2, height * 0.35);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ["#58d4bf", "#ff766d", "#fff4b8"].forEach((color, index) => {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(width * [-0.32, 0, 0.32][index], height * [-0.25, -0.46, -0.25][index], height * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-}
-
-function drawGlassesFilter(ctx, box, style) {
-  const lens = box.eyeDistance * 0.46;
-  ctx.save();
-  ctx.translate(box.eyeCenter.x, box.eyeCenter.y);
-  ctx.rotate(box.angle);
-  ctx.lineWidth = Math.max(5, box.width * 0.045);
-  ctx.strokeStyle = style === "dark" ? "#0c0c0c" : "#171717";
-  ctx.fillStyle = style === "dark" ? "rgba(0, 0, 0, 0.72)" : "rgba(210, 255, 246, 0.18)";
-  [-box.eyeDistance / 2, box.eyeDistance / 2].forEach((x) => {
-    roundRect(ctx, x - lens / 2, -lens * 0.34, lens, lens * 0.62, lens * 0.18);
-    ctx.fill();
-    ctx.stroke();
-    if (style === "clear") {
-      ctx.strokeStyle = "rgba(255,255,255,0.62)";
-      ctx.lineWidth = Math.max(2, box.width * 0.012);
-      ctx.beginPath();
-      ctx.moveTo(x - lens * 0.28, -lens * 0.18);
-      ctx.lineTo(x + lens * 0.18, -lens * 0.28);
-      ctx.stroke();
-      ctx.strokeStyle = "#171717";
-      ctx.lineWidth = Math.max(5, box.width * 0.045);
-    }
-  });
-  ctx.beginPath();
-  ctx.moveTo(-box.eyeDistance / 2 + lens / 2, -lens * 0.05);
-  ctx.lineTo(box.eyeDistance / 2 - lens / 2, -lens * 0.05);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawPartyGlassesFilter(ctx, box) {
-  const lens = box.eyeDistance * 0.48;
-  ctx.save();
-  ctx.translate(box.eyeCenter.x, box.eyeCenter.y);
-  ctx.rotate(box.angle);
-  [["#ff5a7a", -box.eyeDistance / 2], ["#58d4bf", box.eyeDistance / 2]].forEach(([color, x]) => {
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "#10100d";
-    ctx.lineWidth = Math.max(4, box.width * 0.035);
-    ctx.beginPath();
-    for (let i = 0; i < 5; i += 1) {
-      const angle = -Math.PI / 2 + i * (Math.PI * 2 / 5);
-      const outer = lens * 0.48;
-      const inner = lens * 0.23;
-      ctx.lineTo(x + Math.cos(angle) * outer, Math.sin(angle) * outer);
-      ctx.lineTo(x + Math.cos(angle + Math.PI / 5) * inner, Math.sin(angle + Math.PI / 5) * inner);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  });
-  ctx.beginPath();
-  ctx.moveTo(-box.eyeDistance / 2 + lens * 0.25, 0);
-  ctx.lineTo(box.eyeDistance / 2 - lens * 0.25, 0);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawHaloFilter(ctx, box) {
-  const width = box.eyeDistance * 1.7;
-  const height = box.eyeDistance * 0.34;
-  ctx.save();
-  ctx.translate(box.forehead.x, box.forehead.y - box.eyeDistance * 0.72);
-  ctx.rotate(box.angle);
-  ctx.strokeStyle = "rgba(255, 231, 130, 0.94)";
-  ctx.lineWidth = Math.max(6, box.width * 0.04);
-  ctx.shadowColor = "rgba(255, 231, 130, 0.85)";
-  ctx.shadowBlur = box.eyeDistance * 0.18;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawCatFilter(ctx, box) {
-  ctx.save();
-  ctx.translate(box.forehead.x, box.forehead.y + box.eyeDistance * 0.05);
-  ctx.rotate(box.angle);
-  const earW = box.eyeDistance * 0.38;
-  const earH = box.eyeDistance * 0.72;
-  [[-box.eyeDistance * 0.52, -box.eyeDistance * 0.46], [box.eyeDistance * 0.52, -box.eyeDistance * 0.46]].forEach(([x, y]) => {
-    ctx.fillStyle = "#2d2b28";
-    ctx.strokeStyle = "#0c0c0c";
-    ctx.lineWidth = Math.max(4, box.width * 0.028);
-    ctx.beginPath();
-    ctx.moveTo(x, y - earH * 0.5);
-    ctx.lineTo(x - earW * 0.58, y + earH * 0.42);
-    ctx.lineTo(x + earW * 0.58, y + earH * 0.42);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#f19aa8";
-    ctx.beginPath();
-    ctx.moveTo(x, y - earH * 0.18);
-    ctx.lineTo(x - earW * 0.26, y + earH * 0.28);
-    ctx.lineTo(x + earW * 0.26, y + earH * 0.28);
-    ctx.closePath();
-    ctx.fill();
-  });
-  ctx.restore();
-  drawCatNoseAndWhiskers(ctx, box);
-}
-
-function drawCatNoseAndWhiskers(ctx, box) {
-  ctx.save();
-  ctx.translate(box.nose.x, box.nose.y + box.eyeDistance * 0.1);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.moveTo(0, box.eyeDistance * 0.12);
-  ctx.lineTo(-box.eyeDistance * 0.11, 0);
-  ctx.lineTo(box.eyeDistance * 0.11, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.82)";
-  ctx.lineWidth = Math.max(2, box.width * 0.012);
-  [-1, 1].forEach((side) => {
-    [-0.15, 0.02, 0.19].forEach((y) => {
-      ctx.beginPath();
-      ctx.moveTo(side * box.eyeDistance * 0.12, box.eyeDistance * y);
-      ctx.lineTo(side * box.eyeDistance * 0.78, box.eyeDistance * (y - 0.08));
-      ctx.stroke();
-    });
-  });
-  ctx.restore();
-}
-
-function drawBunnyFilter(ctx, box) {
-  ctx.save();
-  ctx.translate(box.forehead.x, box.forehead.y - box.eyeDistance * 0.28);
-  ctx.rotate(box.angle);
-  const earW = box.eyeDistance * 0.36;
-  const earH = box.eyeDistance * 1.25;
-  [[-box.eyeDistance * 0.38, -box.eyeDistance * 0.42, -0.18], [box.eyeDistance * 0.38, -box.eyeDistance * 0.42, 0.18]].forEach(([x, y, rot]) => {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.fillStyle = "#f8f5ea";
-    ctx.strokeStyle = "#4f4c45";
-    ctx.lineWidth = Math.max(4, box.width * 0.026);
-    roundRect(ctx, -earW / 2, -earH / 2, earW, earH, earW);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#f0a9b8";
-    roundRect(ctx, -earW * 0.22, -earH * 0.34, earW * 0.44, earH * 0.62, earW);
-    ctx.fill();
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
-function drawMustacheFilter(ctx, box) {
-  ctx.save();
-  ctx.translate(box.mouth.x, box.mouth.y - box.eyeDistance * 0.12);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "#17120d";
-  [-1, 1].forEach((side) => {
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.bezierCurveTo(side * box.eyeDistance * 0.22, -box.eyeDistance * 0.22, side * box.eyeDistance * 0.62, -box.eyeDistance * 0.1, side * box.eyeDistance * 0.82, 0);
-    ctx.bezierCurveTo(side * box.eyeDistance * 0.62, box.eyeDistance * 0.18, side * box.eyeDistance * 0.23, box.eyeDistance * 0.14, 0, 0);
-    ctx.fill();
-  });
-  ctx.restore();
-}
-
-function drawPirateFilter(ctx, box) {
-  ctx.save();
-  ctx.strokeStyle = "#111";
-  ctx.lineWidth = Math.max(5, box.width * 0.04);
-  ctx.beginPath();
-  ctx.moveTo(box.leftEye.x - box.eyeDistance * 0.75, box.leftEye.y - box.eyeDistance * 0.32);
-  ctx.lineTo(box.rightEye.x + box.eyeDistance * 0.75, box.rightEye.y + box.eyeDistance * 0.28);
-  ctx.stroke();
-  ctx.translate(box.rightEye.x, box.rightEye.y);
-  ctx.rotate(box.angle);
-  ctx.fillStyle = "#050505";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, box.eyeDistance * 0.28, box.eyeDistance * 0.24, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawRobotFilter(ctx, box) {
-  ctx.save();
-  ctx.translate(box.eyeCenter.x, box.eyeCenter.y);
-  ctx.rotate(box.angle);
-  const width = box.eyeDistance * 1.75;
-  const height = box.eyeDistance * 0.72;
-  ctx.fillStyle = "rgba(72, 83, 92, 0.84)";
-  ctx.strokeStyle = "#101820";
-  ctx.lineWidth = Math.max(4, box.width * 0.03);
-  roundRect(ctx, -width / 2, -height / 2, width, height, height * 0.18);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "#6fffe9";
-  [-0.24, 0.24].forEach((offset) => {
-    ctx.beginPath();
-    ctx.arc(width * offset, -height * 0.03, height * 0.14, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.strokeStyle = "#f2c66d";
-  ctx.lineWidth = Math.max(2, box.width * 0.012);
-  for (let i = -2; i <= 2; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(width * -0.38, height * (0.2 + i * 0.04));
-    ctx.lineTo(width * 0.38, height * (0.2 + i * 0.04));
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSparklesFilter(ctx, box) {
-  ctx.save();
-  const time = performance.now() / 800;
-  const spots = [
-    [-0.62, -0.18, "#f2c66d"],
-    [0.64, -0.12, "#8cf7e5"],
-    [-0.48, 0.34, "#ffaaa3"],
-    [0.5, 0.36, "#fff4b8"],
-    [0.02, -0.42, "#ffffff"]
-  ];
-  spots.forEach(([ox, oy, color], index) => {
-    const size = box.eyeDistance * (0.09 + 0.025 * Math.sin(time + index));
-    drawSparkle(ctx, box.cx + ox * box.width, box.cy + oy * box.height, size, color);
-  });
-  ctx.restore();
-}
-
-function drawSparkle(ctx, x, y, size, color) {
-  ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = size * 1.3;
-  ctx.beginPath();
-  ctx.moveTo(x, y - size);
-  ctx.lineTo(x + size * 0.26, y - size * 0.26);
-  ctx.lineTo(x + size, y);
-  ctx.lineTo(x + size * 0.26, y + size * 0.26);
-  ctx.lineTo(x, y + size);
-  ctx.lineTo(x - size * 0.26, y + size * 0.26);
-  ctx.lineTo(x - size, y);
-  ctx.lineTo(x - size * 0.26, y - size * 0.26);
-  ctx.closePath();
-  ctx.fill();
-  ctx.shadowBlur = 0;
-}
-
-function roundRect(ctx, x, y, width, height, radius) {
-  const r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + width - r, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-  ctx.lineTo(x + width, y + height - r);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  ctx.lineTo(x + r, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
 
 function hangupVideoCall() {
@@ -3198,6 +2634,7 @@ function closePeer() {
 }
 
 function resetToLobby() {
+  clearPostGameVideoTimer();
   closePeer();
   currentGame = null;
   gameChat = [];
@@ -3212,6 +2649,7 @@ function resetToLobby() {
 }
 
 function logout() {
+  clearPostGameVideoTimer();
   closePeer();
   if (socket) socket.disconnect();
   localStorage.removeItem("chessface:token");

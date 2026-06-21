@@ -121,11 +121,11 @@
         </div>
 
         <div class="story-grid">
-          <article class="story-card story-card-large story-filters">
+          <article class="story-card story-card-large story-video">
             <div>
-              <p class="eyebrow">Face filters</p>
-              <h3>Laugh, then find the move.</h3>
-              <p>Use playful filters while you play so a random game feels more like sitting across from a real person.</p>
+              <p class="eyebrow">Live video</p>
+              <h3>Read the board and the person.</h3>
+              <p>Play a quick game with a real opponent on camera, then keep talking after the result if both of you want a rematch.</p>
             </div>
           </article>
 
@@ -325,25 +325,6 @@
                 <span id="localVideoLabel">You</span>
               </div>
             </div>
-            <label class="filter-actions" aria-label="Face filters">
-              <span>Face filter</span>
-              <select id="faceFilterSelect">
-                <option value="none">No filter</option>
-                <option value="glasses">Clear glasses</option>
-                <option value="sunglasses">Sunglasses</option>
-                <option value="party-glasses">Party glasses</option>
-                <option value="hat">Top hat</option>
-                <option value="crown">Crown</option>
-                <option value="halo">Halo</option>
-                <option value="strawberry">Strawberry face</option>
-                <option value="cat">Cat ears and nose</option>
-                <option value="bunny">Bunny ears</option>
-                <option value="mustache">Mustache</option>
-                <option value="pirate">Pirate patch</option>
-                <option value="robot">Robot visor</option>
-                <option value="sparkles">Sparkles</option>
-              </select>
-            </label>
             <div class="media-actions">
               <button id="micButton">Mute me</button>
               <button id="opponentMuteButton">Mute opponent</button>
@@ -386,8 +367,9 @@
           <div class="game-result-score" id="gameResultScore">1-0</div>
           <p id="gameResultDetails">Checkmate</p>
           <div class="game-result-actions">
-            <button type="button" class="primary" id="gameResultNewGameButton">New game</button>
-            <button type="button" class="ghost" id="gameResultCloseButton">Close</button>
+            <button type="button" class="primary" id="gameResultRematchButton">Rematch</button>
+            <button type="button" class="ghost" id="gameResultContinueVideoButton">Continue video for 2 minutes</button>
+            <button type="button" class="danger" id="gameResultEndCallButton">End game and call</button>
           </div>
         </div>
       </section>
