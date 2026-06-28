@@ -1599,7 +1599,7 @@ io.on("connection", (socket) => {
       text,
       sentAt: new Date().toISOString()
     };
-    const recipients = game.kind === "team" ? playersForColor(game, colorForUser(game, socket.user.id)) : gamePlayers(game);
+    const recipients = gamePlayers(game);
     for (const player of recipients) io.to(player.socketId).emit("game:chat", message);
   });
 

@@ -112,7 +112,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-21-postgame-video-v58";
+const APP_VERSION = "2026-06-28-team-audio-chat-v60";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -993,7 +993,7 @@ function isMyTurn(game) {
 
 function renderChatState(game) {
   const live = game.status === "playing";
-  chatStatus.textContent = live ? (game.kind === "team" ? "Team chat" : "Live") : "Closed";
+  chatStatus.textContent = live ? (game.kind === "team" ? "All chat" : "Live") : "Closed";
   gameChatInput.disabled = !live;
   if (gameChatSubmit) gameChatSubmit.disabled = !live;
   if (emojiToggle) emojiToggle.disabled = !live;
@@ -1188,7 +1188,7 @@ function ensurePeerAudioElement(peerId, tile) {
 function renderVideoTile(tile, label, peer) {
   if (!tile || !label || !peer) return;
   tile.classList.toggle("is-my-team", Boolean(peer.isTeammate));
-  tile.classList.toggle("is-opponent-team", !peer.isTeammate);
+  tile.classList.toggle("is-opponent-team", false);
   const role = peer.isTeammate ? "teammate" : "opponent";
   const team = peer.teamName || `${peer.teamColor || "other"} team`;
   label.textContent = `${flagEmoji(peer.countryCode)} ${peer.username} · ${team} · ${role}`;
@@ -2578,9 +2578,7 @@ async function toggleOpponentAudio() {
   opponentAudioMuted = !opponentAudioMuted;
   applyOpponentAudioState();
   if (!opponentAudioMuted) {
-    const audibleVideos = [...peerVideoElements.entries()]
-      .filter(([peerId]) => currentGame?.kind !== "team" || videoPeersById.get(peerId)?.isTeammate)
-      .map(([, video]) => video);
+    const audibleVideos = [...peerVideoElements.values()];
     try {
       await Promise.all(audibleVideos.map((video) => video.play().catch(() => null)));
     } catch {
@@ -2591,25 +2589,19 @@ async function toggleOpponentAudio() {
 
 function applyOpponentAudioState() {
   peerVideoElements.forEach((video, peerId) => {
-    const peer = videoPeersById.get(peerId);
-    const shouldMute = currentGame?.kind === "team"
-      ? !peer?.isTeammate || opponentAudioMuted
-      : opponentAudioMuted;
+    const shouldMute = opponentAudioMuted;
     video.muted = true;
     video.volume = 0;
     video.play?.().catch(() => {});
     video.closest(".video-tile")?.classList.toggle("is-muted", shouldMute);
   });
   peerAudioElements.forEach((audio, peerId) => {
-    const peer = videoPeersById.get(peerId);
-    const shouldMute = currentGame?.kind === "team"
-      ? !peer?.isTeammate || opponentAudioMuted
-      : opponentAudioMuted;
+    const shouldMute = opponentAudioMuted;
     audio.muted = shouldMute;
     audio.volume = shouldMute ? 0 : 1;
     if (!shouldMute) audio.play?.().catch(() => {});
   });
-  const target = currentGame?.kind === "team" ? "teammate" : "opponent";
+  const target = currentGame?.kind === "team" ? "others" : "opponent";
   opponentMuteButton.textContent = opponentAudioMuted ? `Unmute ${target}` : `Mute ${target}`;
 }
 
