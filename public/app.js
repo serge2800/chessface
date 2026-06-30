@@ -106,7 +106,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-30-team-video-autoplay-v61";
+const APP_VERSION = "2026-06-30-team-livekit-subscribe-v62";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1757,8 +1757,8 @@ async function startLiveKitRoom() {
     const LiveKit = await loadLiveKitClient();
     closeLiveKitRoom();
     const room = new LiveKit.Room({
-      adaptiveStream: true,
-      dynacast: true,
+      adaptiveStream: false,
+      dynacast: false,
       disconnectOnPageLeave: false,
       videoCaptureDefaults: VIDEO_CONSTRAINTS,
       publishDefaults: {
@@ -1915,6 +1915,13 @@ function scheduleLiveKitSync(room) {
 
 function subscribeLiveKitPublication(publication, participant) {
   if (!publication) return;
+  if (typeof publication.setEnabled === "function") {
+    try {
+      publication.setEnabled(true);
+    } catch {
+      // Some LiveKit publication types do not expose setEnabled in this version.
+    }
+  }
   if (publication.track && (publication.isSubscribed ?? true)) {
     attachLiveKitTrack(publication.track, participant);
     return;
@@ -1943,6 +1950,14 @@ function liveKitPublications(participant) {
   if (typeof participant.getTrackPublications === "function") return participant.getTrackPublications();
   const maps = [participant.trackPublications, participant.videoTrackPublications, participant.audioTrackPublications].filter(Boolean);
   return maps.flatMap((items) => items instanceof Map ? [...items.values()] : Object.values(items));
+}
+
+function liveKitTrackKind(track) {
+  const source = String(track?.source || "").toLowerCase();
+  const kind = String(track?.kind || track?.mediaStreamTrack?.kind || "").toLowerCase();
+  if (kind === "audio" || source === "microphone") return "audio";
+  if (kind === "video" || source === "camera") return "video";
+  return kind || source || "";
 }
 
 function liveKitPeerForParticipant(participant) {
@@ -1975,30 +1990,36 @@ function attachLiveKitTrack(track, participant) {
   if (!video) return;
 
   const mediaTrack = track.mediaStreamTrack;
-  if (mediaTrack) {
-    if (mediaTrack.kind === "audio") {
-      const audio = ensurePeerAudioElement(peerId, tile);
-      const existingAudio = liveKitTrackElements.get(`${peerId}:audio`);
-      if (
-        existingAudio?.track === mediaTrack
-          && audio.srcObject instanceof MediaStream
-          && audio.srcObject.getAudioTracks().includes(mediaTrack)
-      ) {
-        applyOpponentAudioState();
-        if (audio.paused) audio.play?.().catch(() => {});
-        if (video.paused) video.play?.().catch(() => {});
-        return;
-      }
-      const stream = audio.srcObject instanceof MediaStream ? audio.srcObject : new MediaStream();
-      stream.getTracks().filter((item) => item.kind === "audio").forEach((item) => stream.removeTrack(item));
-      stream.addTrack(mediaTrack);
-      audio.srcObject = stream;
-      liveKitTrackElements.set(`${peerId}:audio`, { element: audio, track: mediaTrack });
+  const kind = liveKitTrackKind(track) || mediaTrack?.kind;
+  if (kind === "audio") {
+    const audio = ensurePeerAudioElement(peerId, tile);
+    const existingAudio = liveKitTrackElements.get(`${peerId}:audio`);
+    if (
+      mediaTrack
+        && existingAudio?.track === mediaTrack
+        && audio.srcObject instanceof MediaStream
+        && audio.srcObject.getAudioTracks().includes(mediaTrack)
+    ) {
       applyOpponentAudioState();
-      audio.play?.().catch(() => {});
-      video.play?.().catch(() => {});
+      if (audio.paused) audio.play?.().catch(() => {});
+      if (video.paused) video.play?.().catch(() => {});
       return;
     }
+    if (mediaTrack) {
+      ensureTrackInMediaElement(audio, mediaTrack, "audio");
+      liveKitTrackElements.set(`${peerId}:audio`, { element: audio, track: mediaTrack });
+    } else if (typeof track.attach === "function") {
+      const element = track.attach(audio);
+      if (element && element !== audio && element.srcObject) audio.srcObject = element.srcObject;
+      liveKitTrackElements.set(`${peerId}:audio`, { element: audio, track });
+    }
+    applyOpponentAudioState();
+    audio.play?.().catch(() => {});
+    video.play?.().catch(() => {});
+    refreshLiveKitState(liveKitRoom);
+    return;
+  }
+  if (mediaTrack) {
     const existingVideo = liveKitTrackElements.get(`${peerId}:video`);
     if (existingVideo?.track === mediaTrack && video.srcObject instanceof MediaStream && video.srcObject.getVideoTracks().includes(mediaTrack)) {
       applyOpponentAudioState();
