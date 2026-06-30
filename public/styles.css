@@ -45,11 +45,11 @@ body::before {
   inset: 0;
   z-index: -2;
   background-image:
-    linear-gradient(90deg, rgba(3, 6, 7, 0.98), rgba(3, 6, 7, 0.62) 44%, rgba(3, 6, 7, 0.88)),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.68), transparent 44%),
-    url("assets/chess-hero.png");
+    linear-gradient(90deg, rgba(3, 6, 7, 0.9), rgba(3, 6, 7, 0.32) 42%, rgba(3, 6, 7, 0.86) 72%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.7), transparent 48%),
+    url("assets/chess-king-hero.png");
   background-size: cover;
-  background-position: center;
+  background-position: 50% center;
 }
 
 body::after {
@@ -128,31 +128,14 @@ button:disabled {
 .landing-brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: clamp(32px, 6vh, 72px);
-  color: var(--ink);
-  text-transform: uppercase;
-  font-size: clamp(22px, 2.3vw, 32px);
-  font-weight: 1000;
-}
-
-.landing-brand strong span {
-  color: var(--gold);
+  margin-bottom: clamp(28px, 5vh, 58px);
 }
 
 .landing-logo {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255, 228, 145, 0.58);
-  border-radius: 50%;
-  color: #1f1605;
-  background:
-    radial-gradient(circle at 32% 26%, #fff3bb, var(--gold) 50%, var(--gold-2));
-  box-shadow: 0 0 38px rgba(242, 198, 109, 0.26);
-  font-size: 16px;
-  font-weight: 1000;
+  width: clamp(170px, 18vw, 260px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.54)) drop-shadow(0 0 18px rgba(242, 198, 109, 0.14));
 }
 
 .brand-mark {
@@ -2495,7 +2478,10 @@ body[data-board-theme="wood"] {
 
 @media (max-width: 960px) {
   body::before {
-    background-image: linear-gradient(180deg, rgba(7, 11, 12, 0.96), rgba(7, 11, 12, 0.68)), url("assets/chess-hero.png");
+    background-image:
+      linear-gradient(180deg, rgba(7, 11, 12, 0.94), rgba(7, 11, 12, 0.72)),
+      url("assets/chess-king-hero.png");
+    background-position: 42% center;
   }
 
   .auth-view,
