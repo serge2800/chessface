@@ -1072,16 +1072,16 @@ function renderVideoControls(game) {
 function renderVideoTiles(game) {
   if (!videoGrid) return;
   const peers = videoPeers(game);
-  videoPeersById = new Map(peers.map((peer) => [peer.id, peer]));
+  videoPeersById = new Map(peers.map((peer) => [String(peer.id), peer]));
   videoGrid.classList.toggle("team-video-grid", game.kind === "team");
   videoGrid.classList.toggle("is-video-off", Boolean(game.videoOff));
   const primaryPeer = game.kind === "team"
     ? peers.find((peer) => !peer.isTeammate) || peers[0]
     : peers[0];
-  const activePeerIds = new Set(peers.map((peer) => peer.id));
+  const activePeerIds = new Set(peers.map((peer) => String(peer.id)));
   const primaryTile = remoteVideo.closest(".video-tile");
   peerVideoTiles.forEach((tile, peerId) => {
-    if (!activePeerIds.has(peerId) || (tile === primaryTile && peerId !== primaryPeer?.id)) {
+    if (!activePeerIds.has(String(peerId)) || (tile === primaryTile && String(peerId) !== String(primaryPeer?.id))) {
       if (tile !== primaryTile) {
         tile.remove();
       } else {
@@ -1101,7 +1101,7 @@ function renderVideoTiles(game) {
   localVideoLabel.textContent = game.kind === "team" ? `${flagEmoji(me.countryCode)} You · ${game.color} team` : "You";
   localVideo.closest(".video-tile")?.classList.toggle("is-my-team", game.kind === "team");
   localVideo.closest(".video-tile")?.classList.toggle("is-opponent-team", false);
-  const extraPeers = peers.filter((peer) => peer.id !== primaryPeer?.id);
+  const extraPeers = peers.filter((peer) => String(peer.id) !== String(primaryPeer?.id));
   extraPeers.sort((a, b) => Number(a.isTeammate) - Number(b.isTeammate));
   extraPeers.forEach((peer) => {
     const tile = ensurePeerVideoTile(peer);
@@ -1124,17 +1124,18 @@ function videoPeers(game) {
 }
 
 function ensurePeerVideoTile(peer) {
-  let tile = peerVideoTiles.get(peer.id);
+  const peerId = String(peer.id);
+  let tile = peerVideoTiles.get(peerId);
   if (tile) return tile;
   tile = document.createElement("div");
   tile.className = "video-tile team-video-tile";
-  tile.dataset.peerId = peer.id;
+  tile.dataset.peerId = peerId;
   const video = document.createElement("video");
   prepareVideoElement(video, { muted: true });
   const label = document.createElement("span");
   tile.append(video, label);
   videoGrid.append(tile);
-  attachPeerVideoElement(peer.id, video, tile);
+  attachPeerVideoElement(peerId, video, tile);
   return tile;
 }
 
@@ -1149,11 +1150,16 @@ function prepareVideoElement(video, options = {}) {
     video.muted = true;
     video.volume = 0;
     video.setAttribute("muted", "");
+  } else {
+    video.muted = false;
+    video.volume = 1;
+    video.removeAttribute("muted");
   }
 }
 
 function attachPeerVideoElement(peerId, video, tile) {
-  prepareVideoElement(video, { muted: true });
+  peerId = String(peerId);
+  prepareVideoElement(video, { muted: currentGame?.kind !== "team" });
   peerVideoElements.set(peerId, video);
   if (tile) peerVideoTiles.set(peerId, tile);
 }
@@ -1584,7 +1590,7 @@ function scheduleLiveKitRepair(room, remoteParticipantCount) {
   if (!room || liveKitRoom !== room || !currentGame || currentGame.videoOff || currentGame.status !== "playing") return;
   const expectedRemote = videoPeers(currentGame).length;
   if (!expectedRemote) return;
-  if (remoteParticipantCount > 0) {
+  if (remoteParticipantCount >= expectedRemote) {
     liveKitReconnectAttempts = 0;
     clearTimeout(liveKitReconnectTimer);
     liveKitReconnectTimer = null;
@@ -1594,16 +1600,18 @@ function scheduleLiveKitRepair(room, remoteParticipantCount) {
   liveKitReconnectTimer = window.setTimeout(async () => {
     liveKitReconnectTimer = null;
     if (liveKitRoom !== room || !currentGame || currentGame.videoOff || currentGame.status !== "playing") return;
-    if (liveKitRemoteParticipants(room).length > 0 || !videoPeers(currentGame).length) return;
+    const nextExpectedRemote = videoPeers(currentGame).length;
+    const nextRemoteCount = liveKitRemoteParticipants(room).length;
+    if (!nextExpectedRemote || nextRemoteCount >= nextExpectedRemote) return;
     liveKitReconnectAttempts += 1;
     setLiveKitState({
       mode: "reconnecting LiveKit",
-      lastError: `No remote LiveKit participant received. Reconnect attempt ${liveKitReconnectAttempts}/3.`
+      lastError: `Only ${nextRemoteCount}/${nextExpectedRemote} remote LiveKit participants received. Reconnect attempt ${liveKitReconnectAttempts}/3.`
     });
     await reconnectLiveKitRoom();
-    if (liveKitReconnectAttempts >= 3 && liveKitRemoteParticipants(liveKitRoom).length === 0) {
+    if (liveKitReconnectAttempts >= 3 && liveKitRemoteParticipants(liveKitRoom).length < videoPeers(currentGame).length) {
       setLiveKitState({
-        lastError: "Still no remote LiveKit participant. The other device may be cached, blocked, or not in this LiveKit room."
+        lastError: "Still missing one or more LiveKit participants. The other device may be cached, blocked, or not in this LiveKit room."
       });
     }
   }, 8000);
@@ -1971,18 +1979,26 @@ function attachLiveKitTrack(track, participant) {
     if (mediaTrack.kind === "audio") {
       const audio = ensurePeerAudioElement(peerId, tile);
       const existingAudio = liveKitTrackElements.get(`${peerId}:audio`);
-      if (existingAudio?.track === mediaTrack && audio.srcObject instanceof MediaStream && audio.srcObject.getAudioTracks().includes(mediaTrack)) {
+      if (
+        existingAudio?.track === mediaTrack
+          && audio.srcObject instanceof MediaStream
+          && audio.srcObject.getAudioTracks().includes(mediaTrack)
+      ) {
+        ensureTrackInMediaElement(video, mediaTrack, "audio");
         applyOpponentAudioState();
         if (audio.paused) audio.play?.().catch(() => {});
+        if (video.paused) video.play?.().catch(() => {});
         return;
       }
       const stream = audio.srcObject instanceof MediaStream ? audio.srcObject : new MediaStream();
       stream.getTracks().filter((item) => item.kind === "audio").forEach((item) => stream.removeTrack(item));
       stream.addTrack(mediaTrack);
       audio.srcObject = stream;
+      ensureTrackInMediaElement(video, mediaTrack, "audio");
       liveKitTrackElements.set(`${peerId}:audio`, { element: audio, track: mediaTrack });
       applyOpponentAudioState();
       audio.play?.().catch(() => {});
+      video.play?.().catch(() => {});
       return;
     }
     const existingVideo = liveKitTrackElements.get(`${peerId}:video`);
@@ -1992,12 +2008,9 @@ function attachLiveKitTrack(track, participant) {
       refreshLiveKitState(liveKitRoom);
       return;
     }
-    const stream = video.srcObject instanceof MediaStream ? video.srcObject : new MediaStream();
-    stream.getTracks().filter((item) => item.kind === "video").forEach((item) => stream.removeTrack(item));
-    stream.addTrack(mediaTrack);
-    video.srcObject = stream;
-    video.muted = true;
-    video.volume = 0;
+    ensureTrackInMediaElement(video, mediaTrack, "video");
+    video.muted = opponentAudioMuted;
+    video.volume = opponentAudioMuted ? 0 : 1;
     liveKitTrackElements.set(`${peerId}:video`, { element: video, track: mediaTrack });
   } else if (typeof track.attach === "function") {
     const existingVideo = liveKitTrackElements.get(`${peerId}:video`);
@@ -2014,6 +2027,16 @@ function attachLiveKitTrack(track, participant) {
   applyOpponentAudioState();
   video.play().catch(() => {});
   refreshLiveKitState(liveKitRoom);
+}
+
+function ensureTrackInMediaElement(element, track, kind = track?.kind) {
+  if (!element || !track) return;
+  const stream = element.srcObject instanceof MediaStream ? element.srcObject : new MediaStream();
+  stream.getTracks()
+    .filter((item) => item.kind === kind && item !== track)
+    .forEach((item) => stream.removeTrack(item));
+  if (!stream.getTracks().includes(track)) stream.addTrack(track);
+  element.srcObject = stream;
 }
 
 function detachLiveKitTrack(track, participant) {
@@ -2573,15 +2596,18 @@ async function toggleOpponentAudio() {
 function applyOpponentAudioState() {
   peerVideoElements.forEach((video, peerId) => {
     const shouldMute = opponentAudioMuted;
-    video.muted = true;
-    video.volume = 0;
+    const hasRemoteAudio = video.srcObject instanceof MediaStream && video.srcObject.getAudioTracks().length > 0;
+    video.muted = shouldMute || !hasRemoteAudio;
+    video.volume = shouldMute || !hasRemoteAudio ? 0 : 1;
     video.play?.().catch(() => {});
     video.closest(".video-tile")?.classList.toggle("is-muted", shouldMute);
   });
   peerAudioElements.forEach((audio, peerId) => {
     const shouldMute = opponentAudioMuted;
-    audio.muted = shouldMute;
-    audio.volume = shouldMute ? 0 : 1;
+    const video = peerVideoElements.get(peerId);
+    const videoHasAudio = video?.srcObject instanceof MediaStream && video.srcObject.getAudioTracks().length > 0;
+    audio.muted = shouldMute || videoHasAudio;
+    audio.volume = shouldMute || videoHasAudio ? 0 : 1;
     if (!shouldMute) audio.play?.().catch(() => {});
   });
   const target = currentGame?.kind === "team" ? "others" : "opponent";
