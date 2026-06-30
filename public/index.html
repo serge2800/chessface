@@ -18,27 +18,43 @@
     <main class="shell">
       <section class="auth-view" id="authView">
         <div class="brand-panel">
+          <div class="landing-brand" aria-label="ChessFace">
+            <span class="landing-logo">CF</span>
+            <strong>Chess<span>Face</span></strong>
+          </div>
           <p class="eyebrow">Random live chess</p>
-          <h1>Chess with a face across the board.</h1>
-          <p>Meet a random opponent, switch on video, and play a clean casual game without the heavy tournament feel.</p>
-          <div class="hero-stats" aria-label="Site highlights">
-            <span><strong>Live</strong> video</span>
-            <span><strong>1000</strong> start rating</span>
+          <h1>Play chess. <span>Face to face.</span></h1>
+          <p>Random opponents. Live video. Real chess. Real people.</p>
+          <div class="feature-points" aria-label="ChessFace features">
+            <div>
+              <strong>Random Match</strong>
+              <span>Find an opponent in seconds.</span>
+            </div>
+            <div>
+              <strong>Live Video</strong>
+              <span>See and talk while you play.</span>
+            </div>
+            <div>
+              <strong>Real-time</strong>
+              <span>Fast moves. No waiting.</span>
+            </div>
+          </div>
+          <div class="hero-stats" aria-label="Player rating">
+            <span><strong>1000</strong> starting rating</span>
           </div>
           <div class="hero-actions">
             <a class="hero-link-button" href="/rankings.html">View player rankings</a>
-          </div>
-          <div class="hero-showcase" aria-hidden="true">
-            <img src="assets/matchmaking-03.jpg" alt="" />
-            <img src="assets/matchmaking-12.jpg" alt="" />
-            <img src="assets/matchmaking-21.jpg" alt="" />
           </div>
         </div>
 
         <form class="auth-card" id="authForm">
           <div class="card-heading">
-            <p class="eyebrow">Start playing</p>
-            <h2>Create your player card</h2>
+            <div class="player-card-icon" aria-hidden="true"></div>
+            <div>
+              <p class="eyebrow">Start playing</p>
+              <h2>Create your player card</h2>
+              <span>Start your chess journey</span>
+            </div>
           </div>
           <div class="tabs">
             <button type="button" class="tab active" data-mode="login">Log in</button>
@@ -110,61 +126,6 @@
           <button class="primary" type="submit" id="authSubmit">Log in</button>
           <p class="notice" id="authNotice"></p>
         </form>
-      </section>
-
-      <section class="marketing-view" id="marketingView">
-        <div class="section-kicker visual-kicker">
-          <p class="eyebrow">Why ChessFace</p>
-          <h2>It is chess, but with the person still in the room.</h2>
-          <p>
-            A fast chess table, a live face, a little humor, and enough safety controls to keep the game comfortable.
-          </p>
-        </div>
-
-        <div class="story-grid">
-          <article class="story-card story-card-large story-video">
-            <div>
-              <p class="eyebrow">Live video</p>
-              <h3>Read the board and the person.</h3>
-              <p>Play a quick game with a real opponent on camera, then keep talking after the result if both of you want a rematch.</p>
-            </div>
-          </article>
-
-          <article class="story-card story-matches">
-            <div>
-              <p class="eyebrow">Open tables</p>
-              <h3>Join who is waiting.</h3>
-              <p>See live one-on-one and team tables, then jump into the game you want.</p>
-            </div>
-          </article>
-
-          <article class="story-card story-mobile">
-            <div>
-              <p class="eyebrow">Mobile ready</p>
-              <h3>Your phone is enough.</h3>
-              <p>Open the browser, allow camera and mic, and play from the couch, cafe, or airport.</p>
-            </div>
-          </article>
-        </div>
-
-        <div class="feature-mosaic">
-          <article class="mosaic-card mosaic-safety">
-            <span>Video safety</span>
-            <strong>Hang up video, keep the game.</strong>
-          </article>
-          <article class="mosaic-card mosaic-rating">
-            <span>Ratings</span>
-            <strong>New players move faster, experienced players move steadier.</strong>
-          </article>
-          <article class="mosaic-card mosaic-history">
-            <span>Game review</span>
-            <strong>Replay the moves and analyze finished games.</strong>
-          </article>
-          <article class="mosaic-card mosaic-friends">
-            <span>Friends</span>
-            <strong>Add opponents, message friends, and challenge online players.</strong>
-          </article>
-        </div>
       </section>
 
       <button type="button" class="install-prompt hidden" id="installPrompt">Install ChessFace</button>
