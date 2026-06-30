@@ -46,12 +46,6 @@ const localVideo = document.querySelector("#localVideo");
 const remoteVideo = document.querySelector("#remoteVideo");
 const localVideoLabel = document.querySelector("#localVideoLabel");
 const remoteVideoLabel = document.querySelector("#remoteVideoLabel");
-const videoDebug = document.querySelector("#videoDebug");
-const videoDebugText = document.querySelector("#videoDebugText");
-const mobileVideoDebugButton = document.querySelector("#mobileVideoDebugButton");
-const videoDebugModal = document.querySelector("#videoDebugModal");
-const videoDebugModalText = document.querySelector("#videoDebugModalText");
-const closeVideoDebugButton = document.querySelector("#closeVideoDebugButton");
 const micButton = document.querySelector("#micButton");
 const opponentMuteButton = document.querySelector("#opponentMuteButton");
 const gameChatForm = document.querySelector("#gameChatForm");
@@ -427,14 +421,6 @@ document.querySelector("#newGameButton").addEventListener("click", resetToLobby)
 gameResultRematchButton?.addEventListener("click", requestPostGameRematch);
 gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTemporarily);
 gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
-mobileVideoDebugButton?.addEventListener("click", () => {
-  updateVideoDebug();
-  videoDebugModal?.classList.remove("hidden");
-});
-closeVideoDebugButton?.addEventListener("click", () => videoDebugModal?.classList.add("hidden"));
-videoDebugModal?.addEventListener("click", (event) => {
-  if (event.target === videoDebugModal) videoDebugModal.classList.add("hidden");
-});
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 document.querySelector("#cameraButton").addEventListener("click", toggleCamera);
@@ -1061,7 +1047,6 @@ function renderVideoControls(game) {
   const requestFromMe = game.videoRequestFrom === me.id;
   const requestFromOpponent = game.videoRequestFrom && game.videoRequestFrom !== me.id;
   const videoCanStayOpen = game.status === "playing" || game.status === "finished";
-  mobileVideoDebugButton?.classList.toggle("hidden", !videoCanStayOpen);
   document.querySelector("#hangupVideoButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   opponentMuteButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   micButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
@@ -1675,9 +1660,7 @@ function buildVideoDebugReport() {
 }
 
 function updateVideoDebug() {
-  const report = buildVideoDebugReport();
-  if (videoDebugText) videoDebugText.textContent = report;
-  if (videoDebugModalText) videoDebugModalText.textContent = report;
+  return buildVideoDebugReport();
 }
 
 async function startMediaAndPeer() {
@@ -1726,7 +1709,7 @@ async function startMediaAndPeer() {
       mode: "LiveKit required",
       lastError: "Team games require LiveKit. Check LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, then restart Node.js."
     });
-    showNotice("Team video needs LiveKit. Open Video debug for details.");
+    showNotice("Team video needs LiveKit. Please check the video service configuration.");
     return;
   }
   setLiveKitState({ mode: "WebRTC fallback", connectionState: "fallback" });
@@ -2631,8 +2614,6 @@ function resetToLobby() {
   currentGame = null;
   gameChat = [];
   gameResultModal?.classList.add("hidden");
-  videoDebugModal?.classList.add("hidden");
-  mobileVideoDebugButton?.classList.add("hidden");
   renderGameChat();
   selectedSquare = null;
   gameLayout.classList.add("hidden");
