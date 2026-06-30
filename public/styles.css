@@ -130,25 +130,29 @@ button:disabled {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: clamp(260px, 28vw, 520px);
+  left: clamp(360px, 34vw, 560px);
   z-index: -1;
-  width: min(62vw, 980px);
+  width: min(34vw, 560px);
   pointer-events: none;
   background-image:
     linear-gradient(90deg, rgba(3, 6, 7, 0.28), rgba(3, 6, 7, 0) 28%, rgba(3, 6, 7, 0.42) 86%),
     url("assets/hero-chess-bg.png");
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: 46% center;
-  filter: saturate(1.3) contrast(1.18) brightness(1.18);
-  opacity: 0.92;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 72%, transparent 100%);
+  background-position: 44% center;
+  filter: saturate(1.34) contrast(1.2) brightness(1.2);
+  opacity: 0.96;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 62%, transparent 100%);
 }
 
 .brand-panel {
   position: relative;
   z-index: 1;
-  max-width: 740px;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: clamp(118px, 12vw, 170px) minmax(0, 1fr);
+  column-gap: clamp(34px, 6vw, 96px);
+  align-items: start;
   padding-top: 0;
 }
 
@@ -195,9 +199,18 @@ button:disabled {
   font-weight: 800;
 }
 
+.hero-copy {
+  min-width: 0;
+  padding-top: clamp(16px, 2.4vh, 34px);
+}
+
+.hero-copy .eyebrow {
+  margin: 0 0 10px;
+}
+
 .brand-panel h1 {
   max-width: 720px;
-  margin: 0 0 0 clamp(52px, 7vw, 132px);
+  margin: 0;
   font-size: clamp(50px, 6vw, 86px);
   line-height: 0.94;
   letter-spacing: 0;
@@ -210,14 +223,14 @@ button:disabled {
 
 .brand-panel p:not(.eyebrow) {
   max-width: 580px;
-  margin: 18px 0 0 clamp(52px, 7vw, 132px);
+  margin: 18px 0 0;
   color: rgba(247, 239, 226, 0.74);
   font-size: clamp(19px, 1.8vw, 24px);
   line-height: 1.36;
 }
 
 .eyebrow {
-  margin: 0 0 10px clamp(52px, 7vw, 132px);
+  margin: 0 0 10px;
   color: var(--teal);
   text-transform: uppercase;
   font-size: 12px;
@@ -226,6 +239,7 @@ button:disabled {
 }
 
 .hero-stats {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -275,6 +289,7 @@ button:disabled {
 .feature-points {
   max-width: 640px;
   display: grid;
+  grid-column: 1 / -1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 26px;
@@ -2507,8 +2522,8 @@ body[data-board-theme="wood"] {
   }
 
   .hero-bg-art {
-    left: 22%;
-    width: 76vw;
+    left: 24%;
+    width: 54vw;
     opacity: 0.62;
     background-position: 50% center;
   }
@@ -2644,13 +2659,15 @@ body[data-board-theme="wood"] {
   }
 
   .brand-panel h1 {
-    margin-left: 0;
     font-size: clamp(38px, 14vw, 56px);
   }
 
-  .brand-panel > .eyebrow,
-  .brand-panel > p:not(.eyebrow) {
-    margin-left: 0;
+  .brand-panel {
+    display: block;
+  }
+
+  .hero-copy {
+    padding-top: 0;
   }
 
   .landing-brand {
