@@ -106,7 +106,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-30-team-livekit-subscribe-v62";
+const APP_VERSION = "2026-06-30-team-livekit-diagnostics-v63";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -143,6 +143,7 @@ let liveKitRoom;
 let liveKitTrackElements = new Map();
 let liveKitReconnectTimer;
 let liveKitReconnectAttempts = 0;
+let liveKitPublishRepairTimer;
 let liveKitState = {
   mode: "not started",
   room: "",
@@ -1097,6 +1098,10 @@ function renderVideoTiles(game) {
   primaryTile?.classList.toggle("hidden", !primaryPeer);
   if (primaryPeer) {
     attachPeerVideoElement(primaryPeer.id, remoteVideo, primaryTile);
+    if (primaryTile && !primaryTile.dataset.diagnosticsReady) {
+      primaryTile.dataset.diagnosticsReady = "true";
+      primaryTile.addEventListener("dblclick", () => showVideoDiagnostics(primaryPeer.id));
+    }
     renderVideoTile(primaryTile, remoteVideoLabel, primaryPeer);
   }
   localVideoLabel.textContent = game.kind === "team" ? `${flagEmoji(me.countryCode)} You · ${game.color} team` : "You";
@@ -1135,6 +1140,7 @@ function ensurePeerVideoTile(peer) {
   prepareVideoElement(video, { muted: true });
   const label = document.createElement("span");
   tile.append(video, label);
+  tile.addEventListener("dblclick", () => showVideoDiagnostics(peerId));
   videoGrid.append(tile);
   attachPeerVideoElement(peerId, video, tile);
   return tile;
@@ -1783,6 +1789,7 @@ async function startLiveKitRoom() {
     await room.connect(session.url, session.token, { autoSubscribe: true });
     refreshLiveKitState(room, { mode: "LiveKit connected", room: session.room || currentGame.id, lastError: "" });
     await publishLiveKitTracks(room, LiveKit);
+    scheduleLiveKitPublishRepair(room, LiveKit);
     syncLiveKitParticipants(room);
     scheduleLiveKitSync(room);
     applyOpponentAudioState();
@@ -1889,6 +1896,31 @@ async function publishLiveKitTracks(room, LiveKit) {
       console.warn("[ChessFace] LiveKit microphone publish failed:", error);
       setLiveKitState({ localAudioPublished: false, lastError: error.message || "Microphone publish failed." });
     }
+  }
+}
+
+function scheduleLiveKitPublishRepair(room, LiveKit) {
+  clearInterval(liveKitPublishRepairTimer);
+  liveKitPublishRepairTimer = window.setInterval(() => {
+    if (liveKitRoom !== room || !currentGame || currentGame.videoOff || currentGame.status !== "playing") {
+      clearInterval(liveKitPublishRepairTimer);
+      liveKitPublishRepairTimer = null;
+      return;
+    }
+    repairLiveKitLocalPublish(room, LiveKit);
+  }, 5000);
+}
+
+async function repairLiveKitLocalPublish(room, LiveKit) {
+  const publications = liveKitPublications(room?.localParticipant);
+  const hasCameraPublication = publications.some((publication) => liveKitPublicationKind(publication) === "video");
+  const hasMicPublication = publications.some((publication) => liveKitPublicationKind(publication) === "audio");
+  const videoTrack = localStream?.getVideoTracks?.()[0];
+  const audioTrack = localStream?.getAudioTracks?.()[0];
+  if ((videoTrack && !hasCameraPublication) || (audioTrack && !hasMicPublication)) {
+    await publishLiveKitTracks(room, LiveKit);
+    syncLiveKitParticipants(room);
+    refreshLiveKitState(room, { mode: "LiveKit republished local media" });
   }
 }
 
@@ -2095,6 +2127,8 @@ function clearLiveKitParticipant(peerId) {
 }
 
 function closeLiveKitRoom() {
+  clearInterval(liveKitPublishRepairTimer);
+  liveKitPublishRepairTimer = null;
   if (!liveKitRoom) return;
   try {
     liveKitRoom.disconnect(false);
@@ -2120,6 +2154,43 @@ function closeLiveKitRoom() {
     remoteVideoTracks: 0,
     remoteAudioTracks: 0
   });
+}
+
+function showVideoDiagnostics(peerId = "") {
+  const report = buildVideoDiagnosticsReport(peerId);
+  navigator.clipboard?.writeText(report).catch(() => {});
+  showNotice(report);
+  console.info("[ChessFace video diagnostics]\n" + report);
+}
+
+function buildVideoDiagnosticsReport(peerId = "") {
+  const targetId = String(peerId || "");
+  const participant = liveKitRemoteParticipants(liveKitRoom).find((item) => String(item.identity) === targetId);
+  const tile = peerVideoTiles.get(targetId);
+  const video = peerVideoElements.get(targetId);
+  const stream = video?.srcObject instanceof MediaStream ? video.srcObject : null;
+  const publications = participant ? liveKitPublications(participant) : [];
+  const publicationLines = publications.map((publication) => {
+    const kind = liveKitPublicationKind(publication);
+    const subscribed = publication.isSubscribed === undefined ? "unknown" : String(Boolean(publication.isSubscribed));
+    const muted = publication.isMuted === undefined ? "unknown" : String(Boolean(publication.isMuted));
+    const hasTrack = Boolean(publication.track || publication.videoTrack || publication.audioTrack);
+    return `${kind}: subscribed=${subscribed}, muted=${muted}, track=${hasTrack}`;
+  });
+  return [
+    `Video debug ${APP_VERSION}`,
+    `Player: ${tile?.querySelector("span")?.textContent || targetId || "unknown"}`,
+    `LiveKit participant: ${participant ? "yes" : "no"}`,
+    `Publications: ${publicationLines.length ? publicationLines.join(" | ") : "none"}`,
+    `Attached video tracks: ${stream?.getVideoTracks().length || 0}`,
+    `Attached audio tracks: ${stream?.getAudioTracks().length || 0}`,
+    `Video paused: ${video ? String(video.paused) : "no element"}`,
+    `Ready state: ${video ? String(video.readyState) : "no element"}`,
+    `Room participants: ${liveKitState.remoteParticipants}`,
+    `Remote video tracks: ${liveKitState.remoteVideoTracks}`,
+    `Remote audio tracks: ${liveKitState.remoteAudioTracks}`,
+    `Last error: ${liveKitState.lastError || "none"}`
+  ].join("\n");
 }
 
 async function loadIceServers() {
