@@ -868,6 +868,7 @@ function renderGame(game) {
   document.querySelector("#offerDrawButton").disabled = game.status !== "playing" || drawFromMe;
   document.querySelector("#abortGameButton").classList.toggle("hidden", !game.canAbort);
   const myTurn = isMyTurn(game);
+  if (!myTurn && selectedSquare) selectedSquare = null;
   turnAlarmButton?.classList.toggle("hidden", !(myTurn && game.kind === "team"));
   document.querySelector("#resignButton").disabled = !myTurn;
   document.querySelector("#resignButton").title = myTurn ? "" : "Only the player whose turn it is can resign.";
@@ -1348,11 +1349,16 @@ function handleSquareClick(square, piece) {
 
 function canMovePiece(piece) {
   if (!piece || !currentGame || currentGame.status !== "playing") return false;
-  return isOwnPiece(piece);
+  return isMyTurn(currentGame) && isOwnPiece(piece);
 }
 
 function makeMove(from, to) {
   if (!from || !to || from === to) return;
+  if (!isMyTurn(currentGame)) {
+    showMoveBlockedNotice();
+    if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+    return;
+  }
   if (!isLegalMove(from, to)) {
     playIllegalMoveSound();
     if (currentGame) renderBoard(currentGame.fen, currentGame.color);
@@ -1483,8 +1489,9 @@ function isOwnPiece(piece) {
 
 function showMoveBlockedNotice(piece) {
   if (!currentGame || currentGame.status !== "playing") return;
+  playIllegalMoveSound();
   if (currentGame.turn !== currentGame.color) {
-    showNotice(`${currentGame.turn === "white" ? "White" : "Black"} to move.`);
+    showNotice(`${currentGame.turn === "white" ? "White" : "Black"} to move. Wait for your turn.`);
     return;
   }
   if (currentGame.kind === "team" && currentGame.activePlayerId !== me.id) {
