@@ -106,7 +106,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-28-team-audio-chat-v60";
+const APP_VERSION = "2026-06-30-team-video-autoplay-v61";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1159,7 +1159,7 @@ function prepareVideoElement(video, options = {}) {
 
 function attachPeerVideoElement(peerId, video, tile) {
   peerId = String(peerId);
-  prepareVideoElement(video, { muted: currentGame?.kind !== "team" });
+  prepareVideoElement(video, { muted: true });
   peerVideoElements.set(peerId, video);
   if (tile) peerVideoTiles.set(peerId, tile);
 }
@@ -1984,7 +1984,6 @@ function attachLiveKitTrack(track, participant) {
           && audio.srcObject instanceof MediaStream
           && audio.srcObject.getAudioTracks().includes(mediaTrack)
       ) {
-        ensureTrackInMediaElement(video, mediaTrack, "audio");
         applyOpponentAudioState();
         if (audio.paused) audio.play?.().catch(() => {});
         if (video.paused) video.play?.().catch(() => {});
@@ -1994,7 +1993,6 @@ function attachLiveKitTrack(track, participant) {
       stream.getTracks().filter((item) => item.kind === "audio").forEach((item) => stream.removeTrack(item));
       stream.addTrack(mediaTrack);
       audio.srcObject = stream;
-      ensureTrackInMediaElement(video, mediaTrack, "audio");
       liveKitTrackElements.set(`${peerId}:audio`, { element: audio, track: mediaTrack });
       applyOpponentAudioState();
       audio.play?.().catch(() => {});
@@ -2009,8 +2007,8 @@ function attachLiveKitTrack(track, participant) {
       return;
     }
     ensureTrackInMediaElement(video, mediaTrack, "video");
-    video.muted = opponentAudioMuted;
-    video.volume = opponentAudioMuted ? 0 : 1;
+    video.muted = true;
+    video.volume = 0;
     liveKitTrackElements.set(`${peerId}:video`, { element: video, track: mediaTrack });
   } else if (typeof track.attach === "function") {
     const existingVideo = liveKitTrackElements.get(`${peerId}:video`);
@@ -2584,9 +2582,9 @@ async function toggleOpponentAudio() {
   opponentAudioMuted = !opponentAudioMuted;
   applyOpponentAudioState();
   if (!opponentAudioMuted) {
-    const audibleVideos = [...peerVideoElements.values()];
+    const audibleAudioElements = [...peerAudioElements.values()];
     try {
-      await Promise.all(audibleVideos.map((video) => video.play().catch(() => null)));
+      await Promise.all(audibleAudioElements.map((audio) => audio.play().catch(() => null)));
     } catch {
       showNotice("Tap again if the browser blocks sound.");
     }
@@ -2596,18 +2594,15 @@ async function toggleOpponentAudio() {
 function applyOpponentAudioState() {
   peerVideoElements.forEach((video, peerId) => {
     const shouldMute = opponentAudioMuted;
-    const hasRemoteAudio = video.srcObject instanceof MediaStream && video.srcObject.getAudioTracks().length > 0;
-    video.muted = shouldMute || !hasRemoteAudio;
-    video.volume = shouldMute || !hasRemoteAudio ? 0 : 1;
+    video.muted = true;
+    video.volume = 0;
     video.play?.().catch(() => {});
     video.closest(".video-tile")?.classList.toggle("is-muted", shouldMute);
   });
   peerAudioElements.forEach((audio, peerId) => {
     const shouldMute = opponentAudioMuted;
-    const video = peerVideoElements.get(peerId);
-    const videoHasAudio = video?.srcObject instanceof MediaStream && video.srcObject.getAudioTracks().length > 0;
-    audio.muted = shouldMute || videoHasAudio;
-    audio.volume = shouldMute || videoHasAudio ? 0 : 1;
+    audio.muted = shouldMute;
+    audio.volume = shouldMute ? 0 : 1;
     if (!shouldMute) audio.play?.().catch(() => {});
   });
   const target = currentGame?.kind === "team" ? "others" : "opponent";
