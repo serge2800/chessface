@@ -1,4 +1,4 @@
-const CACHE_NAME = "chessface-shell-v60";
+const CACHE_NAME = "chessface-shell-v65";
 const NETWORK_FIRST_PATHS = new Set([
   "/",
   "/index.html",
@@ -17,6 +17,8 @@ const SHELL_ASSETS = [
   "/styles.css",
   "/pieces.js",
   "/app.js",
+  "/config/sounds.js",
+  "/stockfish-analysis-service.js",
   "/profile.js",
   "/vendor/stockfish/stockfish-18-lite-single.js",
   "/vendor/stockfish/stockfish-18-lite-single.wasm",

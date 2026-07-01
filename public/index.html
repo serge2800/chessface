@@ -320,14 +320,20 @@
 
       <section class="game-result-modal hidden" id="gameResultModal" aria-label="Game result" aria-modal="true" role="dialog">
         <div class="game-result-card">
-          <p class="eyebrow" id="gameResultReason">Game over</p>
-          <h2 id="gameResultTitle">You won</h2>
-          <div class="game-result-score" id="gameResultScore">1-0</div>
-          <p id="gameResultDetails">Checkmate</p>
+          <div class="accuracy-hero">
+            <p class="eyebrow" id="gameResultReason">Game over</p>
+            <h2 id="gameResultTitle">Accuracy Analysis</h2>
+            <div class="game-result-score" id="gameResultScore">1-0</div>
+            <p id="gameResultDetails">Checkmate</p>
+            <p class="analysis-status" id="accuracyAnalysisStatus">Analyzing accuracy...</p>
+          </div>
+          <div class="accuracy-analysis hidden" id="accuracyAnalysisPanel"></div>
           <div class="game-result-actions">
-            <button type="button" class="primary" id="gameResultRematchButton">Rematch</button>
-            <button type="button" class="ghost" id="gameResultContinueVideoButton">Continue video for 2 minutes</button>
-            <button type="button" class="danger" id="gameResultEndCallButton">End game and call</button>
+            <button type="button" class="ghost" id="gameResultAnalysisButton">View Move Analysis</button>
+            <button type="button" class="primary" id="gameResultRematchButton">Play Again</button>
+            <button type="button" class="ghost" id="gameResultShareButton">Share Result</button>
+            <button type="button" class="danger hidden" id="gameResultEndCallButton">End game and call</button>
+            <button type="button" class="ghost hidden" id="gameResultContinueVideoButton">Continue video for 2 minutes</button>
           </div>
         </div>
       </section>
@@ -354,6 +360,17 @@
                 <strong>Wood</strong>
               </button>
             </div>
+          </div>
+
+          <div class="sound-choice-panel">
+            <label class="select-row">
+              <span>Check sound</span>
+              <select id="checkSoundSetting"></select>
+            </label>
+            <label class="select-row">
+              <span>Checkmate sound</span>
+              <select id="checkmateSoundSetting"></select>
+            </label>
           </div>
 
           <div class="settings-grid">
@@ -395,6 +412,8 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="config/sounds.js"></script>
+    <script src="stockfish-analysis-service.js"></script>
     <script src="pieces.js"></script>
     <script src="app.js"></script>
   </body>

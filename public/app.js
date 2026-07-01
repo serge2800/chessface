@@ -69,6 +69,8 @@ const moveSoundSetting = document.querySelector("#moveSoundSetting");
 const capturedPiecesSetting = document.querySelector("#capturedPiecesSetting");
 const confirmActionsSetting = document.querySelector("#confirmActionsSetting");
 const allowChallengesSetting = document.querySelector("#allowChallengesSetting");
+const checkSoundSetting = document.querySelector("#checkSoundSetting");
+const checkmateSoundSetting = document.querySelector("#checkmateSoundSetting");
 const installPrompt = document.querySelector("#installPrompt");
 const gameResultModal = document.querySelector("#gameResultModal");
 const gameResultReason = document.querySelector("#gameResultReason");
@@ -78,6 +80,10 @@ const gameResultDetails = document.querySelector("#gameResultDetails");
 const gameResultRematchButton = document.querySelector("#gameResultRematchButton");
 const gameResultContinueVideoButton = document.querySelector("#gameResultContinueVideoButton");
 const gameResultEndCallButton = document.querySelector("#gameResultEndCallButton");
+const gameResultAnalysisButton = document.querySelector("#gameResultAnalysisButton");
+const gameResultShareButton = document.querySelector("#gameResultShareButton");
+const accuracyAnalysisStatus = document.querySelector("#accuracyAnalysisStatus");
+const accuracyAnalysisPanel = document.querySelector("#accuracyAnalysisPanel");
 
 const pieceMap = {
   p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚",
@@ -106,7 +112,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-06-30-team-livekit-diagnostics-v63";
+const APP_VERSION = "2026-07-01-accuracy-analysis-v65";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -168,6 +174,11 @@ let filteredLocalStream;
 let deferredInstallPrompt;
 let gameChat = [];
 let shownResultDialogKey = "";
+let soundSettings = loadSoundSettings();
+let playerSoundSettings = new Map();
+let lastPlayedSoundEventId = "";
+let accuracyAnalysisRunId = 0;
+let analyzingAccuracyGameId = "";
 
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get("verified") === "1") {
@@ -422,6 +433,8 @@ document.querySelector("#newGameButton").addEventListener("click", resetToLobby)
 gameResultRematchButton?.addEventListener("click", requestPostGameRematch);
 gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTemporarily);
 gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
+gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
+gameResultShareButton?.addEventListener("click", shareAccuracyResult);
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 document.querySelector("#cameraButton").addEventListener("click", toggleCamera);
@@ -547,6 +560,10 @@ if (settingsModal) {
   allowChallengesSetting
 ].filter(Boolean).forEach((control) => control.addEventListener("input", updateSettingsFromControls));
 
+[checkSoundSetting, checkmateSoundSetting].filter(Boolean).forEach((control) => {
+  control.addEventListener("input", updateSoundSettingsFromControls);
+});
+
 boardThemeButtons.forEach((button) => {
   button.addEventListener("click", () => {
     settings.boardTheme = button.dataset.boardTheme;
@@ -644,6 +661,10 @@ function connectSocket() {
     await enterGame(game);
   });
   socket.on("game:update", renderGame);
+  socket.on("sound:settings", ({ userId, settings: nextSettings }) => {
+    if (!userId) return;
+    playerSoundSettings.set(userId, normalizeSoundSettings(nextSettings));
+  });
   socket.on("game:chat", addGameChatMessage);
   socket.on("webrtc:signal", handleSignal);
   socket.on("webrtc:start", ({ gameId, peerId, initiator }) => {
@@ -680,6 +701,7 @@ async function enterGame(game) {
   seekTeamButton.disabled = false;
   cancelSeekButton.classList.add("hidden");
   renderGame(game);
+  sendSoundSettings();
   await startMediaAndPeer();
 }
 
@@ -836,6 +858,7 @@ function applyMatchmakingSlide(index) {
 
 function renderGame(game) {
   const previousFen = currentGame?.fen;
+  syncPlayerSoundSettings(game.soundSettings);
   currentGame = game;
   gameLayout?.classList.toggle("team-game-layout", game.kind === "team");
   boardWrap?.classList.toggle("team-game", game.kind === "team");
@@ -844,7 +867,8 @@ function renderGame(game) {
     finishPieceDrag();
     selectedSquare = null;
   }
-  if (previousFen && previousFen !== game.fen && settings.moveSound) playMoveSound();
+  if (previousFen && previousFen !== game.fen && settings.moveSound && !game.soundEvent) playMoveSound();
+  playMoveResultSound(game, previousFen);
   statusTitle.textContent = game.status === "playing"
     ? `${game.timeControl}${game.kind === "team" ? " team" : ""} game`
     : "Game over";
@@ -885,6 +909,7 @@ function renderGame(game) {
   if (game.status === "finished") {
     postGameTimeControl = game.timeControl || postGameTimeControl || selectedTime;
     maybeShowGameResultDialog(game);
+    maybeStartAccuracyAnalysis(game);
     if (game.kind !== "team") {
       me.rating = game.color === "white" ? game.players.white.rating : game.players.black.rating;
       me.gamesPlayed = (me.gamesPlayed || 0) + 1;
@@ -894,7 +919,7 @@ function renderGame(game) {
 }
 
 function maybeShowGameResultDialog(game) {
-  if (!gameResultModal || !["checkmate", "draw", "agreement", "timeout"].includes(game.reason)) return;
+  if (!gameResultModal || game.status !== "finished") return;
   const key = `${game.id}:${game.result}:${game.reason}`;
   if (shownResultDialogKey === key) return;
   shownResultDialogKey = key;
@@ -902,26 +927,30 @@ function maybeShowGameResultDialog(game) {
   const score = gameResultScoreText(game.result);
   const isDraw = game.result === "draw";
   const won = !isDraw && game.result === game.color;
-  const winningSide = game.result === "white" ? "White" : game.result === "black" ? "Black" : "";
-  const losingSide = game.result === "white" ? "Black" : game.result === "black" ? "White" : "";
-  const sideLabel = game.kind === "team" ? " team" : "";
-
-  if (game.reason === "timeout") {
-    gameResultReason.textContent = `${losingSide}${sideLabel} lost on time`;
-    gameResultTitle.textContent = won ? "You won" : "You lost on time";
-    gameResultScore.textContent = score;
-    gameResultDetails.textContent = won
-      ? `${winningSide}${sideLabel} won because ${losingSide}${sideLabel} ran out of time.`
-      : `${winningSide}${sideLabel} won because ${losingSide}${sideLabel} ran out of time.`;
-    gameResultModal.classList.remove("hidden");
-    return;
-  }
-
-  gameResultReason.textContent = isDraw ? "Game drawn" : "Checkmate";
-  gameResultTitle.textContent = isDraw ? "Draw" : won ? "You won" : "You lost";
+  const resultLine = gameResultLine(game);
+  gameResultReason.textContent = "Game Over";
+  gameResultTitle.textContent = "Accuracy Analysis";
   gameResultScore.textContent = score;
-  gameResultDetails.textContent = isDraw ? `Final score ${score}` : `${score} by checkmate`;
+  gameResultDetails.textContent = isDraw ? resultLine : `${resultLine}${won ? " You win!" : ""}`;
+  accuracyAnalysisPanel?.classList.add("hidden");
+  if (accuracyAnalysisStatus) accuracyAnalysisStatus.textContent = game.accuracyAnalysis ? "Accuracy analysis complete." : "Analyzing accuracy...";
   gameResultModal.classList.remove("hidden");
+}
+
+function gameResultLine(game) {
+  const sideLabel = game.kind === "team" ? " team" : "";
+  const winner = game.result === "white" ? `White${sideLabel}` : game.result === "black" ? `Black${sideLabel}` : "";
+  const loser = game.result === "white" ? `Black${sideLabel}` : game.result === "black" ? `White${sideLabel}` : "";
+  if (game.result === "draw") {
+    if (game.reason === "agreement") return "Draw by agreement.";
+    if (game.reason === "stalemate") return "Draw by stalemate.";
+    return "Game drawn.";
+  }
+  if (game.reason === "timeout") return `${winner} won on time. ${loser} ran out of time.`;
+  if (game.reason === "resignation") return `${winner} won by resignation.`;
+  if (game.reason === "abort") return "Game aborted.";
+  if (game.reason === "checkmate") return `${winner} won by checkmate.`;
+  return `${winner} won.`;
 }
 
 function gameResultScoreText(result) {
@@ -929,6 +958,171 @@ function gameResultScoreText(result) {
   if (result === "black") return "0-1";
   if (result === "draw") return "1/2-1/2";
   return "*";
+}
+
+async function maybeStartAccuracyAnalysis(game) {
+  if (!accuracyAnalysisPanel || !accuracyAnalysisStatus || game.reason === "abort") {
+    if (accuracyAnalysisStatus) accuracyAnalysisStatus.textContent = "";
+    return;
+  }
+  if (game.accuracyAnalysis) {
+    renderAccuracyAnalysis(game, game.accuracyAnalysis);
+    return;
+  }
+  if (analyzingAccuracyGameId === game.id) return;
+  analyzingAccuracyGameId = game.id;
+  const runId = Date.now();
+  accuracyAnalysisRunId = runId;
+  accuracyAnalysisPanel.classList.add("hidden");
+  accuracyAnalysisStatus.textContent = "Starting Stockfish accuracy analysis...";
+  try {
+    const analysis = await window.ChessFaceAccuracyAnalysis.analyzeGame(game, ({ message }) => {
+      if (accuracyAnalysisRunId === runId && currentGame?.id === game.id) {
+        accuracyAnalysisStatus.textContent = message;
+      }
+    });
+    if (accuracyAnalysisRunId !== runId || currentGame?.id !== game.id) return;
+    currentGame = { ...currentGame, accuracyAnalysis: analysis };
+    renderAccuracyAnalysis(currentGame, analysis);
+    socket?.emit("game:accuracy:save", { gameId: game.id, analysis });
+  } catch (error) {
+    console.warn("[ChessFace] Accuracy analysis failed:", error);
+    if (accuracyAnalysisRunId === runId && currentGame?.id === game.id) {
+      accuracyAnalysisStatus.textContent = "Accuracy analysis could not be completed.";
+      accuracyAnalysisPanel.classList.add("hidden");
+    }
+  } finally {
+    if (accuracyAnalysisRunId === runId) analyzingAccuracyGameId = "";
+  }
+}
+
+function renderAccuracyAnalysis(game, analysis) {
+  if (!accuracyAnalysisPanel || !accuracyAnalysisStatus || !analysis) return;
+  accuracyAnalysisStatus.textContent = "Accuracy analysis complete.";
+  accuracyAnalysisPanel.classList.remove("hidden");
+  const myColor = game.color === "black" ? "black" : "white";
+  const myAccuracy = analysis[myColor]?.accuracy || 0;
+  const myCreature = analysis.creatures?.[myColor] || accuracyCreatureFor(myAccuracy);
+  accuracyAnalysisPanel.innerHTML = `
+    <section class="accuracy-scoreboard">
+      ${renderAccuracySide("White", analysis.white, game.players?.white)}
+      <div class="accuracy-counts-card">
+        ${renderAccuracyCounts("White", analysis.white)}
+        ${renderAccuracyCounts("Black", analysis.black)}
+      </div>
+      ${renderAccuracySide("Black", analysis.black, game.players?.black)}
+    </section>
+    <section class="accuracy-universe">
+      <div class="accuracy-section-head">
+        <h3>Accuracy Evolution</h3>
+        <p>Where do you stand?</p>
+      </div>
+      <div class="creature-strip">
+        ${accuracyCreatures().map(renderCreatureTick).join("")}
+      </div>
+      <div class="accuracy-meter">
+        <span class="accuracy-marker white-marker" style="left: ${clampPercent(analysis.white.accuracy)}%">
+          <b>White</b><strong>${analysis.white.accuracy}%</strong>
+        </span>
+        <span class="accuracy-marker black-marker" style="left: ${clampPercent(analysis.black.accuracy)}%">
+          <b>Black</b><strong>${analysis.black.accuracy}%</strong>
+        </span>
+      </div>
+    </section>
+    <section class="accuracy-reveal">
+      <div>
+        <p>You are</p>
+        <h3>${escapeHtml(myCreature.name)}</h3>
+        <strong>${escapeHtml(myCreature.range)}%</strong>
+        <span>Accuracy: ${myAccuracy}%</span>
+        <small>${escapeHtml(myCreature.description)}</small>
+      </div>
+      <div class="accuracy-creature-large" aria-hidden="true">${escapeHtml(myCreature.icon)}</div>
+      <aside class="accuracy-next">
+        <h4>Keep climbing!</h4>
+        ${accuracyCreatures().filter((creature) => creature.min > myAccuracy).slice(0, 3).map((creature) => `
+          <div><span>${escapeHtml(creature.icon)}</span><b>${escapeHtml(creature.range)}%</b><strong>${escapeHtml(creature.name)}</strong></div>
+        `).join("") || "<div><span>🌟</span><b>98-100%</b><strong>Supreme already.</strong></div>"}
+      </aside>
+    </section>
+  `;
+}
+
+function renderAccuracySide(label, summary, player) {
+  return `
+    <article class="accuracy-player ${label.toLowerCase()}">
+      <img src="${escapeHtml(player?.avatarUrl || "/default-avatar.svg")}" alt="" />
+      <span>${escapeHtml(label)}</span>
+      <strong>${Number(summary?.accuracy || 0)}%</strong>
+    </article>
+  `;
+}
+
+function renderAccuracyCounts(label, summary = {}) {
+  const counts = summary.counts || {};
+  return `
+    <div>
+      <h4>${escapeHtml(label)}</h4>
+      ${["Excellent", "Good", "Inaccuracy", "Mistake", "Blunder"].map((name) => `
+        <p class="${name.toLowerCase()}"><span>${name === "Inaccuracy" ? "Inaccuracies" : `${name}s`}</span><b>${Number(counts[name] || 0)}</b></p>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderCreatureTick(creature) {
+  return `
+    <div class="creature-tick">
+      <b>${escapeHtml(creature.range)}%</b>
+      <span>${escapeHtml(creature.icon)}</span>
+      <strong>${escapeHtml(creature.name)}</strong>
+    </div>
+  `;
+}
+
+function accuracyCreatures() {
+  return window.ChessFaceAccuracyAnalysis?.creatures || [];
+}
+
+function accuracyCreatureFor(accuracy) {
+  return accuracyCreatures().find((creature) => accuracy >= creature.min && accuracy <= creature.max)
+    || { name: "Mystery Glorbo", range: "0-100", icon: "✨", description: "A mysterious creature from the analysis nebula." };
+}
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, Number(value || 0)));
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
+function openCurrentGameAnalysis() {
+  if (!currentGame?.id) return;
+  window.open(`/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`, "_blank", "noopener");
+}
+
+async function shareAccuracyResult() {
+  const analysis = currentGame?.accuracyAnalysis;
+  const text = analysis
+    ? `ChessFace Accuracy: White ${analysis.white.accuracy}% vs Black ${analysis.black.accuracy}%`
+    : `ChessFace result: ${gameResultLine(currentGame || {})}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "ChessFace Accuracy Analysis", text, url: location.href });
+    } else {
+      await navigator.clipboard?.writeText(`${text} ${location.href}`);
+      showNotice("Result copied.");
+    }
+  } catch {
+    // Sharing can be cancelled by the user.
+  }
 }
 
 function clearPostGameVideoTimer() {
@@ -2790,6 +2984,82 @@ function showNotice(message) {
   }, 4200);
 }
 
+function soundOptions() {
+  return window.ChessFaceSounds?.soundOptions || [{ id: "none", label: "No sound", file: null }];
+}
+
+function playConfiguredSound(soundId) {
+  window.ChessFaceSounds?.playSound?.(soundId);
+}
+
+function normalizeSoundSettings(nextSettings = {}) {
+  const validIds = new Set(soundOptions().map((sound) => sound.id));
+  const checkSound = validIds.has(nextSettings.checkSound) ? nextSettings.checkSound : "none";
+  const checkmateSound = validIds.has(nextSettings.checkmateSound) ? nextSettings.checkmateSound : "none";
+  return { checkSound, checkmateSound };
+}
+
+function loadSoundSettings() {
+  return normalizeSoundSettings({
+    checkSound: localStorage.getItem("chessface_check_sound") || "none",
+    checkmateSound: localStorage.getItem("chessface_checkmate_sound") || "none"
+  });
+}
+
+function saveSoundSettings() {
+  localStorage.setItem("chessface_check_sound", soundSettings.checkSound);
+  localStorage.setItem("chessface_checkmate_sound", soundSettings.checkmateSound);
+}
+
+function populateSoundDropdown(select, value) {
+  if (!select) return;
+  select.innerHTML = "";
+  soundOptions().forEach((sound) => {
+    const option = document.createElement("option");
+    option.value = sound.id;
+    option.textContent = sound.label;
+    select.append(option);
+  });
+  select.value = value;
+}
+
+function syncSoundControls() {
+  populateSoundDropdown(checkSoundSetting, soundSettings.checkSound);
+  populateSoundDropdown(checkmateSoundSetting, soundSettings.checkmateSound);
+}
+
+function updateSoundSettingsFromControls() {
+  soundSettings = normalizeSoundSettings({
+    checkSound: checkSoundSetting?.value || "none",
+    checkmateSound: checkmateSoundSetting?.value || "none"
+  });
+  saveSoundSettings();
+  if (me?.id) playerSoundSettings.set(me.id, soundSettings);
+  sendSoundSettings();
+}
+
+function sendSoundSettings() {
+  if (!socket?.connected) return;
+  socket.emit("sound:settings", soundSettings);
+}
+
+function syncPlayerSoundSettings(settingsByPlayer = {}) {
+  if (me?.id) playerSoundSettings.set(me.id, soundSettings);
+  Object.entries(settingsByPlayer || {}).forEach(([userId, nextSettings]) => {
+    playerSoundSettings.set(userId, normalizeSoundSettings(nextSettings));
+  });
+}
+
+function playMoveResultSound(game, previousFen) {
+  const soundEvent = game?.soundEvent;
+  if (!previousFen || previousFen === game?.fen || !soundEvent?.id || lastPlayedSoundEventId === soundEvent.id) return;
+  lastPlayedSoundEventId = soundEvent.id;
+  if (soundEvent.type !== "check" && soundEvent.type !== "checkmate") return;
+  const ownerSettings = playerSoundSettings.get(soundEvent.playerId) || normalizeSoundSettings();
+  const soundId = soundEvent.type === "checkmate" ? ownerSettings.checkmateSound : ownerSettings.checkSound;
+  playConfiguredSound(soundId);
+}
+
 function loadSettings() {
   try {
     return { ...defaultSettings, ...JSON.parse(localStorage.getItem("chessface:settings") || "{}") };
@@ -2862,6 +3132,7 @@ function capturedText(color, onBoard, starting) {
 }
 
 syncSettingsControls();
+syncSoundControls();
 applySettings();
 boot();
 setAuthMode(mode);

@@ -603,6 +603,7 @@ function buildCleanPgn(game, playedAt) {
 function saveGameRecord(game, ratingChanges) {
   const records = readGameRecords();
   const replay = buildReplayFromChess(game.chess);
+  game.replay = replay;
   const playedAt = new Date().toISOString();
   const cleanPgn = buildCleanPgn(game, playedAt);
   records.unshift({
@@ -615,6 +616,7 @@ function saveGameRecord(game, ratingChanges) {
     pgn: cleanPgn,
     moves: replay.moves,
     positions: replay.positions,
+    accuracyAnalysis: game.accuracyAnalysis || null,
     clocks: game.clocks,
     ratingChanges,
     players: {
@@ -637,6 +639,20 @@ function saveGameRecord(game, ratingChanges) {
   writeGameRecords(records.slice(0, 1000));
 }
 
+function saveAccuracyAnalysis(game, analysis) {
+  if (!game || !analysis || typeof analysis !== "object") return;
+  game.accuracyAnalysis = {
+    ...analysis,
+    savedAt: new Date().toISOString()
+  };
+  const records = readGameRecords();
+  const record = records.find((item) => item.id === game.id);
+  if (record) {
+    record.accuracyAnalysis = game.accuracyAnalysis;
+    writeGameRecords(records);
+  }
+}
+
 function gamePayload(game, viewerId) {
   const isTeamGame = game.kind === "team";
   const color = colorForUser(game, viewerId);
@@ -644,11 +660,14 @@ function gamePayload(game, viewerId) {
   const activePlayer = isTeamGame ? currentTeamMover(game) : null;
   const teammate = isTeamGame ? teammateForUser(game, viewerId) : null;
   const allPlayers = gamePlayers(game);
+  const replay = game.replay || buildReplayFromChess(game.chess);
   return {
     id: game.id,
     kind: game.kind || "normal",
     fen: game.chess.fen(),
     pgn: game.chess.pgn(),
+    moves: replay.moves,
+    positions: replay.positions,
     moveCount,
     canAbort: game.status === "playing" && moveCount === 0,
     legalMoves: game.chess.moves({ verbose: true }).map((move) => ({ from: move.from, to: move.to })),
@@ -680,8 +699,25 @@ function gamePayload(game, viewerId) {
     } : null,
     drawOfferFrom: game.drawOfferFrom,
     videoOff: game.videoOff,
-    videoRequestFrom: game.videoRequestFrom
+    videoRequestFrom: game.videoRequestFrom,
+    soundSettings: soundSettingsPayload(game),
+    soundEvent: game.soundEvent || null,
+    accuracyAnalysis: game.accuracyAnalysis || null
   };
+}
+
+function normalizeSoundSettings(settings = {}) {
+  const validIds = new Set(["none", "fart", "laugh", "bell", "dramatic"]);
+  const checkSound = validIds.has(settings.checkSound) ? settings.checkSound : "none";
+  const checkmateSound = validIds.has(settings.checkmateSound) ? settings.checkmateSound : "none";
+  return { checkSound, checkmateSound };
+}
+
+function soundSettingsPayload(game) {
+  return Object.fromEntries(gamePlayers(game).map((player) => [
+    player.id,
+    normalizeSoundSettings(sockets.get(player.socketId)?.soundSettings)
+  ]));
 }
 
 function videoPeerPayload(game, viewerId, player) {
@@ -1378,7 +1414,12 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  sockets.set(socket.id, { userId: socket.user.id, gameId: null, queuedFor: null });
+  sockets.set(socket.id, {
+    userId: socket.user.id,
+    gameId: null,
+    queuedFor: null,
+    soundSettings: normalizeSoundSettings()
+  });
   socket.emit("profile", socket.user);
   socket.emit("openChallenges:update", openChallengesPayload());
   const activeGame = findActiveGameForUser(socket.user.id);
@@ -1512,6 +1553,33 @@ io.on("connection", (socket) => {
     io.to(challenge.fromSocketId).emit("challenge:declined", { from: socket.user.username });
   });
 
+  socket.on("sound:settings", (nextSettings) => {
+    const state = sockets.get(socket.id);
+    if (!state) return;
+    state.soundSettings = normalizeSoundSettings(nextSettings);
+    const game = games.get(state.gameId);
+    if (!game) return;
+    for (const player of gamePlayers(game)) {
+      io.to(player.socketId).emit("sound:settings", {
+        userId: socket.user.id,
+        settings: state.soundSettings
+      });
+    }
+  });
+
+  socket.on("game:accuracy:save", ({ gameId, analysis }) => {
+    const state = sockets.get(socket.id);
+    const game = games.get(gameId || state?.gameId);
+    if (!game || game.status !== "finished") return;
+    if (!gamePlayers(game).some((player) => player.id === socket.user.id)) return;
+    if (game.accuracyAnalysis) {
+      socket.emit("game:update", gamePayload(game, socket.user.id));
+      return;
+    }
+    saveAccuracyAnalysis(game, analysis);
+    emitGame(game);
+  });
+
   socket.on("game:move", ({ from, to, promotion }) => {
     const state = sockets.get(socket.id);
     const game = games.get(state?.gameId);
@@ -1540,10 +1608,30 @@ io.on("connection", (socket) => {
     game.clocks[color] += game.increment;
     game.drawOfferFrom = null;
     game.lastTickAt = Date.now();
+    const moveCount = game.chess.history().length;
+    game.soundEvent = null;
 
-    if (game.chess.isCheckmate()) finishGame(game, color, "checkmate");
+    if (game.chess.isCheckmate()) {
+      game.soundEvent = {
+        id: `${game.id}:${moveCount}:checkmate`,
+        type: "checkmate",
+        playerId: socket.user.id,
+        color
+      };
+      finishGame(game, color, "checkmate");
+    }
     else if (game.chess.isDraw()) finishGame(game, "draw", "draw");
-    else emitGame(game);
+    else {
+      if (game.chess.isCheck()) {
+        game.soundEvent = {
+          id: `${game.id}:${moveCount}:check`,
+          type: "check",
+          playerId: socket.user.id,
+          color
+        };
+      }
+      emitGame(game);
+    }
   });
 
   socket.on("game:resign", () => {
