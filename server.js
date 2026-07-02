@@ -707,9 +707,13 @@ function gamePayload(game, viewerId) {
 }
 
 function normalizeSoundSettings(settings = {}) {
-  const validIds = new Set(["none", "fart", "laugh", "bell", "dramatic"]);
-  const checkSound = validIds.has(settings.checkSound) ? settings.checkSound : "none";
-  const checkmateSound = validIds.has(settings.checkmateSound) ? settings.checkmateSound : "none";
+  const validSoundId = (value) => (
+    typeof value === "string"
+      && value.length <= 80
+      && (value === "none" || /^[a-z0-9-]+$/.test(value))
+  );
+  const checkSound = validSoundId(settings.checkSound) ? settings.checkSound : "none";
+  const checkmateSound = validSoundId(settings.checkmateSound) ? settings.checkmateSound : "none";
   return { checkSound, checkmateSound };
 }
 
