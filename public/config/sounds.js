@@ -6,6 +6,11 @@ window.ChessFaceSounds = (() => {
     "file": null
   },
   {
+    "id": "random",
+    "label": "Choose random",
+    "file": null
+  },
+  {
     "id": "911-emergency",
     "label": "911 Emergency",
     "file": "/assets/sounds/911_emergency.mp3"
@@ -378,19 +383,30 @@ window.ChessFaceSounds = (() => {
 ];
 
   function playSound(soundId) {
-    const option = soundOptions.find((sound) => sound.id === soundId);
-    if (!option || option.id === "none" || !option.file) return;
+    const option = resolveSoundOption(soundId);
+    if (!option || !option.file) return;
     try {
       const audio = new Audio(option.file);
       audio.volume = 0.7;
       audio.play().catch((error) => {
         console.warn("Sound playback failed:", error);
-        playFallbackSound(soundId);
+        playFallbackSound(option.id);
       });
     } catch (error) {
       console.warn("Sound could not be played:", error);
-      playFallbackSound(soundId);
+      playFallbackSound(option.id);
     }
+  }
+
+  function resolveSoundOption(soundId) {
+    if (soundId === "random") {
+      const playableSounds = soundOptions.filter((sound) => sound.file);
+      if (!playableSounds.length) return null;
+      return playableSounds[Math.floor(Math.random() * playableSounds.length)];
+    }
+    const option = soundOptions.find((sound) => sound.id === soundId);
+    if (!option || option.id === "none") return null;
+    return option;
   }
 
   function playFallbackSound(soundId) {

@@ -710,7 +710,7 @@ function normalizeSoundSettings(settings = {}) {
   const validSoundId = (value) => (
     typeof value === "string"
       && value.length <= 80
-      && (value === "none" || /^[a-z0-9-]+$/.test(value))
+      && (value === "none" || value === "random" || /^[a-z0-9-]+$/.test(value))
   );
   const checkSound = validSoundId(settings.checkSound) ? settings.checkSound : "none";
   const checkmateSound = validSoundId(settings.checkmateSound) ? settings.checkmateSound : "none";
