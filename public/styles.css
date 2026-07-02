@@ -1982,15 +1982,16 @@ body[data-board-theme="wood"] {
   display: grid;
   place-items: center;
   padding: 24px;
+  overflow-x: hidden;
   background: rgba(0, 0, 0, 0.66);
   backdrop-filter: blur(10px);
 }
 
 .game-result-card {
-  width: min(1180px, 100%);
+  width: min(1120px, calc(100vw - 24px));
   max-height: calc(100vh - 48px);
   overflow: auto;
-  padding: 28px;
+  padding: clamp(14px, 2vw, 22px);
   text-align: center;
   border: 1px solid rgba(242, 198, 109, 0.34);
   border-radius: 10px;
@@ -2002,20 +2003,20 @@ body[data-board-theme="wood"] {
 }
 
 .game-result-card h2 {
-  margin: 8px 0 0;
-  font-size: clamp(38px, 8vw, 66px);
+  margin: 4px 0 0;
+  font-size: clamp(32px, 5vw, 54px);
   line-height: 0.95;
 }
 
 .game-result-score {
   width: fit-content;
-  margin: 18px auto 12px;
-  padding: 10px 24px;
+  margin: 10px auto 8px;
+  padding: 7px 18px;
   border: 1px solid rgba(242, 198, 109, 0.52);
   border-radius: 999px;
   color: #1c1407;
   background: linear-gradient(135deg, #ffe392, var(--gold));
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 1000;
   box-shadow: 0 16px 34px rgba(185, 128, 47, 0.2);
 }
@@ -2035,25 +2036,25 @@ body[data-board-theme="wood"] {
 
 .accuracy-analysis {
   display: grid;
-  gap: 18px;
-  margin-top: 18px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .accuracy-scoreboard {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) minmax(280px, 1.2fr) minmax(160px, 0.8fr);
-  gap: 16px;
+  grid-template-columns: minmax(120px, 0.65fr) minmax(260px, 1.35fr) minmax(120px, 0.65fr);
+  gap: 10px;
   align-items: center;
 }
 
 .accuracy-player {
   display: grid;
   justify-items: center;
-  gap: 8px;
+  gap: 5px;
 }
 
 .accuracy-player img {
-  width: min(150px, 30vw);
+  width: min(92px, 16vw);
   aspect-ratio: 1;
   border: 3px solid rgba(255, 255, 255, 0.14);
   border-radius: 50%;
@@ -2063,20 +2064,20 @@ body[data-board-theme="wood"] {
 
 .accuracy-player span {
   color: var(--muted);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 1000;
 }
 
 .accuracy-player strong {
-  font-size: clamp(46px, 7vw, 76px);
+  font-size: clamp(34px, 5vw, 58px);
   line-height: 0.9;
 }
 
 .accuracy-counts-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 22px;
-  padding: 18px 22px;
+  gap: 14px;
+  padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.045);
@@ -2091,7 +2092,7 @@ body[data-board-theme="wood"] {
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  margin: 8px 0;
+  margin: 4px 0;
   font-weight: 1000;
 }
 
@@ -2102,7 +2103,7 @@ body[data-board-theme="wood"] {
 .accuracy-counts-card .blunder { color: #ff4360; }
 
 .accuracy-universe {
-  padding: 18px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
@@ -2110,47 +2111,51 @@ body[data-board-theme="wood"] {
 
 .accuracy-section-head h3 {
   margin: 0;
-  font-size: 32px;
+  font-size: 26px;
 }
 
 .accuracy-section-head p {
-  margin: 4px 0 16px;
+  margin: 2px 0 10px;
   color: var(--muted);
   font-weight: 900;
 }
 
 .creature-strip {
   display: grid;
-  grid-template-columns: repeat(21, minmax(64px, 1fr));
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 8px;
+  grid-template-columns: repeat(21, minmax(0, 1fr));
+  gap: 3px;
+  overflow: visible;
+  padding-bottom: 2px;
 }
 
 .creature-tick {
   display: grid;
   gap: 4px;
   justify-items: center;
-  min-width: 64px;
+  min-width: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: clamp(6px, 0.72vw, 9px);
   font-weight: 1000;
 }
 
 .creature-tick span {
-  font-size: 34px;
+  font-size: clamp(17px, 2.2vw, 28px);
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.36));
 }
 
 .creature-tick strong {
   color: var(--ink);
-  font-size: 10px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(6px, 0.72vw, 9px);
+  line-height: 1.05;
+  text-align: center;
 }
 
 .accuracy-meter {
   position: relative;
-  height: 72px;
-  margin: 12px 12px 0;
+  height: 50px;
+  margin: 8px 12px 0;
   border-radius: 999px;
   background: linear-gradient(90deg, #ff3e4d, #ff9a3d, #e9ff3f, #44e978, #45e0ff, #875bff, #f4c7ff);
   box-shadow: 0 0 24px rgba(88, 212, 191, 0.25);
@@ -2170,9 +2175,9 @@ body[data-board-theme="wood"] {
   content: "";
   width: 0;
   height: 0;
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-  border-bottom: 30px solid currentColor;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 22px solid currentColor;
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.55));
 }
 
@@ -2187,10 +2192,10 @@ body[data-board-theme="wood"] {
 
 .accuracy-reveal {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 0.75fr;
-  gap: 18px;
+  grid-template-columns: 1fr 0.7fr 0.75fr;
+  gap: 12px;
   align-items: stretch;
-  padding: 20px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background:
@@ -2209,14 +2214,14 @@ body[data-board-theme="wood"] {
 .accuracy-reveal h3 {
   margin: 6px 0;
   color: #d9a8ff;
-  font-size: clamp(44px, 7vw, 84px);
+  font-size: clamp(34px, 5.4vw, 64px);
   line-height: 0.9;
 }
 
 .accuracy-reveal strong {
   display: block;
   color: #ffe14f;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 1000;
 }
 
@@ -2233,19 +2238,19 @@ body[data-board-theme="wood"] {
 .accuracy-creature-large {
   display: grid;
   place-items: center;
-  min-height: 260px;
-  font-size: clamp(120px, 18vw, 230px);
+  min-height: 150px;
+  font-size: clamp(86px, 10vw, 150px);
   filter: drop-shadow(0 0 32px rgba(242, 198, 109, 0.35));
 }
 
 .accuracy-next {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .accuracy-next h4 {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .accuracy-next div {

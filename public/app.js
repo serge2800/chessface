@@ -112,7 +112,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-01-accuracy-analysis-v65";
+const APP_VERSION = "2026-07-02-compact-results-sound-fallback-v67";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -621,6 +621,7 @@ function handleErrorMessage(message) {
 function connectSocket() {
   if (socket) socket.disconnect();
   socket = io({ auth: { token } });
+  socket.on("connect", sendSoundSettings);
   socket.on("connect_error", (error) => showNotice(error.message));
   socket.on("error:message", handleErrorMessage);
   socket.on("queue:waiting", (time) => {
@@ -663,7 +664,7 @@ function connectSocket() {
   socket.on("game:update", renderGame);
   socket.on("sound:settings", ({ userId, settings: nextSettings }) => {
     if (!userId) return;
-    playerSoundSettings.set(userId, normalizeSoundSettings(nextSettings));
+    playerSoundSettings.set(String(userId), normalizeSoundSettings(nextSettings));
   });
   socket.on("game:chat", addGameChatMessage);
   socket.on("webrtc:signal", handleSignal);
@@ -1064,7 +1065,7 @@ function renderAccuracyCounts(label, summary = {}) {
     <div>
       <h4>${escapeHtml(label)}</h4>
       ${["Excellent", "Good", "Inaccuracy", "Mistake", "Blunder"].map((name) => `
-        <p class="${name.toLowerCase()}"><span>${name === "Inaccuracy" ? "Inaccuracies" : `${name}s`}</span><b>${Number(counts[name] || 0)}</b></p>
+        <p class="${name.toLowerCase()}"><span>${name === "Inaccuracy" ? "Inaccuracies" : name}</span><b>${Number(counts[name] || 0)}</b></p>
       `).join("")}
     </div>
   `;
@@ -3034,7 +3035,7 @@ function updateSoundSettingsFromControls() {
     checkmateSound: checkmateSoundSetting?.value || "none"
   });
   saveSoundSettings();
-  if (me?.id) playerSoundSettings.set(me.id, soundSettings);
+  if (me?.id) playerSoundSettings.set(String(me.id), soundSettings);
   sendSoundSettings();
 }
 
@@ -3044,9 +3045,9 @@ function sendSoundSettings() {
 }
 
 function syncPlayerSoundSettings(settingsByPlayer = {}) {
-  if (me?.id) playerSoundSettings.set(me.id, soundSettings);
+  if (me?.id) playerSoundSettings.set(String(me.id), soundSettings);
   Object.entries(settingsByPlayer || {}).forEach(([userId, nextSettings]) => {
-    playerSoundSettings.set(userId, normalizeSoundSettings(nextSettings));
+    playerSoundSettings.set(String(userId), normalizeSoundSettings(nextSettings));
   });
 }
 
@@ -3055,7 +3056,7 @@ function playMoveResultSound(game, previousFen) {
   if (!previousFen || previousFen === game?.fen || !soundEvent?.id || lastPlayedSoundEventId === soundEvent.id) return;
   lastPlayedSoundEventId = soundEvent.id;
   if (soundEvent.type !== "check" && soundEvent.type !== "checkmate") return;
-  const ownerSettings = playerSoundSettings.get(soundEvent.playerId) || normalizeSoundSettings();
+  const ownerSettings = normalizeSoundSettings(soundEvent.settings || playerSoundSettings.get(String(soundEvent.playerId)));
   const soundId = soundEvent.type === "checkmate" ? ownerSettings.checkmateSound : ownerSettings.checkSound;
   playConfiguredSound(soundId);
 }

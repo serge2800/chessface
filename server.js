@@ -720,6 +720,17 @@ function soundSettingsPayload(game) {
   ]));
 }
 
+function moveSoundEvent(game, moveCount, type, player, color) {
+  return {
+    id: `${game.id}:${moveCount}:${type}:${player.id}`,
+    type,
+    playerId: player.id,
+    username: player.username,
+    color,
+    settings: normalizeSoundSettings(sockets.get(player.socketId)?.soundSettings)
+  };
+}
+
 function videoPeerPayload(game, viewerId, player) {
   const peerColor = colorForUser(game, player.id);
   return {
@@ -1612,23 +1623,13 @@ io.on("connection", (socket) => {
     game.soundEvent = null;
 
     if (game.chess.isCheckmate()) {
-      game.soundEvent = {
-        id: `${game.id}:${moveCount}:checkmate`,
-        type: "checkmate",
-        playerId: socket.user.id,
-        color
-      };
+      game.soundEvent = moveSoundEvent(game, moveCount, "checkmate", { ...socket.user, socketId: socket.id }, color);
       finishGame(game, color, "checkmate");
     }
     else if (game.chess.isDraw()) finishGame(game, "draw", "draw");
     else {
       if (game.chess.isCheck()) {
-        game.soundEvent = {
-          id: `${game.id}:${moveCount}:check`,
-          type: "check",
-          playerId: socket.user.id,
-          color
-        };
+        game.soundEvent = moveSoundEvent(game, moveCount, "check", { ...socket.user, socketId: socket.id }, color);
       }
       emitGame(game);
     }
