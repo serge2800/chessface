@@ -1423,7 +1423,7 @@ input[type="file"] {
 }
 
 .game-layout {
-  --play-surface-size: min(82vh, calc(100vw - 450px), 960px);
+  --play-surface-size: min(78vh, calc(100vw - 540px), 880px);
   --camera-stack-extra: 76px;
   --board-top-lift: 96px;
   display: grid;
@@ -1433,7 +1433,8 @@ input[type="file"] {
 }
 
 .game-layout.team-game-layout {
-  grid-template-columns: minmax(780px, 1fr) minmax(480px, 620px);
+  --play-surface-size: min(76vh, calc(100vw - 690px), 820px);
+  grid-template-columns: minmax(0, 1fr) minmax(480px, 620px);
   gap: 22px;
   align-items: start;
 }
@@ -1962,13 +1963,14 @@ input[type="file"] {
 .board-stage {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(112px, 150px) minmax(0, auto);
+  grid-template-columns: minmax(128px, 150px) minmax(0, auto);
   gap: 10px;
   align-items: start;
   justify-content: center;
   justify-self: center;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
 }
 
 .board-side-controls {
@@ -1979,6 +1981,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
+  width: min(150px, 100%);
 }
 
 .board-side-controls .media-actions,
