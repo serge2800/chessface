@@ -1974,6 +1974,7 @@ input[type="file"] {
 .board-side-controls {
   grid-column: 1;
   grid-row: 1;
+  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
   display: grid;
   gap: 4px;
   align-content: start;
