@@ -1,0 +1,20 @@
+{
+  "name": "ChessFace",
+  "short_name": "ChessFace",
+  "description": "Random live chess with video chat.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070b0c",
+  "theme_color": "#0d1714",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "social", "entertainment"]
+}

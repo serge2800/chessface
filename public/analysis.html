@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace Analysis</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="profile-page analysis-page">
+    <main class="profile-shell analysis-shell">
+      <header class="topbar analysis-topbar">
+        <div>
+          <p class="eyebrow">chessface.net</p>
+          <h2>Game analysis</h2>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="profile" id="analysisProfileButton" title="Open profile">
+            <img id="profileAvatar" alt="" />
+            <div>
+              <strong><span id="profileFlag"></span> <span id="profileName">ChessFace</span></strong>
+              <span id="profileMeta"></span>
+            </div>
+          </button>
+          <button type="button" class="ghost nav-action-button" id="dashboardButton">Dashboard</button>
+          <button type="button" class="ghost nav-action-button" id="friendsButton">Friends</button>
+          <button type="button" class="ghost nav-action-button" onclick="location.href = '/rankings.html'">Rankings</button>
+          <button type="button" class="ghost nav-action-button" id="editProfileButton">Edit profile</button>
+          <button type="button" class="ghost logout-button" id="profileLogoutButton">Log out</button>
+        </div>
+      </header>
+
+      <section class="analysis-layout">
+        <aside class="review-panel analysis-review-panel" id="reviewPanel">
+          <p>Loading game analysis...</p>
+        </aside>
+      </section>
+
+      <div class="hidden" aria-hidden="true">
+        <span id="profileRating"></span>
+        <span id="profileGames"></span>
+        <span id="profileFriends"></span>
+        <span id="profileRd"></span>
+        <span id="profileOnline"></span>
+        <span id="profileCountry"></span>
+        <span id="profileJoined"></span>
+        <div id="gameList"></div>
+        <div id="statsTabs"></div>
+        <h2 id="statsTitle"></h2>
+        <svg id="ratingChart"></svg>
+      </div>
+    </main>
+
+    <script src="pieces.js"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>

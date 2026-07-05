@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Edit ChessFace Profile</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="profile-page">
+    <main class="profile-shell">
+      <section class="profile-hero edit-profile-hero">
+        <div class="profile-identity">
+          <img id="editAvatarPreview" alt="" />
+          <div>
+            <p class="eyebrow">Edit profile</p>
+            <h1 id="editUsername">ChessFace</h1>
+            <p id="editName"></p>
+            <div class="profile-facts">
+              <span>Change country and profile image below</span>
+              <span>Name and nickname are locked</span>
+              <span id="editFlag">🏳</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="ghost logout-button" id="dashboardButton">Back to dashboard</button>
+      </section>
+
+      <form class="edit-profile-card" id="editProfileForm">
+        <div class="edit-profile-heading">
+          <p class="eyebrow">Account details</p>
+          <h2>Update your visible profile</h2>
+        </div>
+        <label>
+          Country
+          <select name="countryCode" id="editCountry">
+            <option value="US">United States</option>
+            <option value="AM">Armenia</option>
+            <option value="CA">Canada</option>
+            <option value="GB">United Kingdom</option>
+            <option value="FR">France</option>
+            <option value="DE">Germany</option>
+            <option value="ES">Spain</option>
+            <option value="IT">Italy</option>
+            <option value="RU">Russia</option>
+            <option value="CN">China</option>
+            <option value="IN">India</option>
+            <option value="IR">Iran</option>
+            <option value="BR">Brazil</option>
+            <option value="AU">Australia</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </label>
+
+        <label>
+          Profile image
+          <input name="avatar" id="editAvatar" type="file" accept="image/*" />
+        </label>
+
+        <button class="primary" type="submit">Save profile</button>
+        <p class="notice" id="editProfileNotice"></p>
+      </form>
+    </main>
+
+    <script src="edit-profile.js"></script>
+  </body>
+</html>

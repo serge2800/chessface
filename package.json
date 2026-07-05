@@ -1,0 +1,19 @@
+{
+  "name": "video-chess",
+  "version": "0.1.0",
+  "description": "Casual live chess with random matchmaking and video chat.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "chess.js": "^1.0.0",
+    "express": "^4.19.2",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.10",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.8.3",
+    "uuid": "^14.0.0"
+  }
+}
