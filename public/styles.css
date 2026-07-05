@@ -1962,10 +1962,12 @@ input[type="file"] {
 .board-stage {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(118px, 150px) auto;
+  grid-template-columns: minmax(112px, 150px) minmax(0, auto);
   gap: 10px;
   align-items: start;
-  justify-self: end;
+  justify-content: center;
+  justify-self: center;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -1976,7 +1978,7 @@ input[type="file"] {
   align-content: start;
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
-  transform: translateX(-190px);
+  min-width: 0;
 }
 
 .board-side-controls .media-actions,
@@ -1994,9 +1996,9 @@ input[type="file"] {
 .donkey-mood-slots {
   position: absolute;
   top: calc(-1 * var(--board-top-lift) + 52px);
-  left: -48px;
+  left: 0;
   z-index: 4;
-  width: 186px;
+  width: min(150px, 100%);
   height: calc(var(--play-surface-size) + var(--board-top-lift) - 12px);
   display: grid;
   grid-template-rows: minmax(190px, 1fr) minmax(190px, 1fr);
@@ -2018,14 +2020,14 @@ input[type="file"] {
 }
 
 .donkey-mood-top {
-  width: calc(100% + 26px);
+  width: 100%;
   height: calc(100% - 23px);
-  transform: translate(-26px, 29px);
+  transform: translateY(29px);
 }
 
 .donkey-mood-bottom {
-  width: calc(100% + 26px);
-  transform: translate(-26px, -95px);
+  width: 100%;
+  transform: translateY(-95px);
 }
 
 .donkey-mood img {
@@ -3145,7 +3147,7 @@ body[data-board-theme="wood"] {
 .board-side-controls .turn-status-button,
 .board-side-controls .accept-beg-takeback-button {
   position: relative;
-  left: -39px;
+  left: 0;
 }
 
 .board-side-controls .media-actions button,
