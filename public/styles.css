@@ -1963,6 +1963,7 @@ input[type="file"] {
   position: relative;
   display: grid;
   grid-template-columns: minmax(112px, 150px) minmax(0, auto);
+  grid-template-rows: auto auto;
   gap: 10px;
   align-items: start;
   justify-content: center;
@@ -1972,7 +1973,8 @@ input[type="file"] {
 }
 
 .board-side-controls {
-  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   gap: 4px;
   align-content: start;
@@ -1994,15 +1996,13 @@ input[type="file"] {
 
 
 .donkey-mood-slots {
-  position: absolute;
-  top: calc(-1 * var(--board-top-lift) + 52px);
-  left: 0;
-  z-index: 4;
-  width: min(150px, 100%);
-  height: calc(var(--play-surface-size) + var(--board-top-lift) - 12px);
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  min-height: 0;
   display: grid;
-  grid-template-rows: minmax(190px, 1fr) minmax(190px, 1fr);
-  gap: 106px;
+  grid-template-rows: repeat(2, minmax(148px, auto));
+  gap: 8px;
   pointer-events: none;
 }
 
@@ -2021,13 +2021,13 @@ input[type="file"] {
 
 .donkey-mood-top {
   width: 100%;
-  height: calc(100% - 23px);
-  transform: translateY(29px);
+  height: 100%;
+  transform: none;
 }
 
 .donkey-mood-bottom {
   width: 100%;
-  transform: translateY(-95px);
+  transform: none;
 }
 
 .donkey-mood img {
@@ -2054,6 +2054,10 @@ input[type="file"] {
   transform: translate(5px, 18px) scale(0.96);
 }
 
+.board-stage > .board {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
 
 .eval-bar {
   position: absolute;
