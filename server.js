@@ -21,8 +21,10 @@ const UPLOAD_DIR = path.join(__dirname, "uploads");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const GAMES_FILE = path.join(DATA_DIR, "games.json");
 const MESSAGES_FILE = path.join(DATA_DIR, "messages.json");
+const DESKTOP_SOUND_SOURCE_DIR = path.join(process.env.HOME || __dirname, "Desktop", "mps sounds");
+const BUNDLED_SOUND_SOURCE_DIR = path.join(__dirname, "public", "assets", "sounds");
 const SOUND_SOURCE_DIR = process.env.CHESSFACE_SOUNDS_DIR
-  || path.join(process.env.HOME || __dirname, "Desktop", "mps sounds");
+  || (fs.existsSync(DESKTOP_SOUND_SOURCE_DIR) ? DESKTOP_SOUND_SOURCE_DIR : BUNDLED_SOUND_SOURCE_DIR);
 const SOUND_EXTENSIONS = new Set([".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav"]);
 const RANDOM_TURN_SOUND_LOCK_MS = 8500;
 const TAKEBACK_REQUEST_LIMIT = 5;
@@ -174,6 +176,8 @@ function readSoundManifest() {
   if (!fs.existsSync(SOUND_SOURCE_DIR)) return [];
   const items = [];
   const ids = new Set();
+  const hasCategoryFolders = fs.readdirSync(SOUND_SOURCE_DIR, { withFileTypes: true })
+    .some((entry) => !entry.name.startsWith(".") && entry.isDirectory());
 
   function walk(directory, parts = []) {
     fs.readdirSync(directory, { withFileTypes: true })
@@ -187,6 +191,7 @@ function readSoundManifest() {
           return;
         }
         if (!entry.isFile() || !SOUND_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) return;
+        if (hasCategoryFolders && parts.length === 0) return;
 
         const relativePath = path.join(...nextParts);
         const hash = crypto.createHash("sha1").update(relativePath).digest("hex").slice(0, 8);
