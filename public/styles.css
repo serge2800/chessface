@@ -2119,7 +2119,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: -88px;
+  top: 0;
   z-index: 3;
 }
 
