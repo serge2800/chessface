@@ -1492,7 +1492,7 @@ input[type="file"] {
   grid-area: top;
 }
 
-.team-game .board {
+.team-game .board-stage {
   grid-area: board;
 }
 
