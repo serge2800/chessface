@@ -2061,8 +2061,8 @@ input[type="file"] {
   grid-row: 1;
 }
 
-.team-game .board-stage > .board,
-.team-game .eval-bar {
+.board-stage > .board,
+.eval-bar {
   transform: translateX(30px) !important;
 }
 
