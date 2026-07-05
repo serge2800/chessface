@@ -1966,7 +1966,7 @@ input[type="file"] {
   grid-template-columns: minmax(128px, 150px) minmax(0, auto);
   gap: 10px;
   align-items: start;
-  justify-content: center;
+  justify-content: end;
   justify-self: center;
   width: 100%;
   max-width: 100%;
