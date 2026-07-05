@@ -1434,7 +1434,7 @@ input[type="file"] {
 
 .game-layout.team-game-layout {
   grid-template-columns: minmax(780px, 1fr) minmax(480px, 620px);
-  gap: 22px;
+  gap: 0;
   align-items: start;
 }
 
@@ -1447,6 +1447,7 @@ input[type="file"] {
 .team-game-layout .video-panel {
   position: sticky;
   top: 14px;
+  padding-left: 0;
 }
 
 .game-layout:not(.team-game-layout) .board-wrap {
@@ -1486,6 +1487,7 @@ input[type="file"] {
   row-gap: 10px;
   align-items: start;
   padding-left: 10px;
+  padding-right: 0;
 }
 
 .team-game .board-player-top {
@@ -1493,7 +1495,11 @@ input[type="file"] {
 }
 
 .team-game .board-stage {
-  grid-area: board;
+  grid-column: 1 / -1;
+  grid-row: 2 / 5;
+  grid-template-columns: minmax(142px, 176px) minmax(0, auto);
+  justify-content: space-between;
+  justify-self: stretch;
 }
 
 .team-game .board-player-bottom {
