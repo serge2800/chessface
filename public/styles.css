@@ -2003,6 +2003,15 @@ input[type="file"] {
   margin-top: 0;
 }
 
+.board-side-controls #hangupVideoButton,
+.board-side-controls .board-side-actions,
+.board-side-controls .turn-random-sound,
+.board-side-controls .takeback-request-button,
+.board-side-controls .turn-status-button,
+.board-side-controls .accept-beg-takeback-button {
+  transform: translateX(-15px);
+}
+
 
 .donkey-mood-slots {
   display: none;
@@ -2064,7 +2073,7 @@ input[type="file"] {
 
 .board-stage > .board,
 .eval-bar {
-  transform: translateX(45px) !important;
+  transform: translateX(52px) !important;
 }
 
 .eval-bar {
