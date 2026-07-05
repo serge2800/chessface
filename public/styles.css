@@ -2061,6 +2061,11 @@ input[type="file"] {
   grid-row: 1;
 }
 
+.team-game .board-stage > .board,
+.team-game .eval-bar {
+  transform: translateX(30px) !important;
+}
+
 .eval-bar {
   position: absolute;
   top: calc(-1 * var(--board-top-lift));
