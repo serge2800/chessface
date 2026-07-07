@@ -1989,7 +1989,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
-  transform: translateX(-43px);
+  transform: translateX(-46px);
 }
 
 .board-side-controls .media-actions,
@@ -2079,7 +2079,7 @@ input[type="file"] {
 }
 
 .eval-bar {
-  transform: translateX(27px) !important;
+  transform: translateX(22px) !important;
 }
 
 .eval-bar {
@@ -2129,17 +2129,46 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-top,
 .board-wrap:not(.team-game) > .board-player-bottom {
-  width: fit-content;
-  max-width: min(390px, 100%);
-  grid-template-columns: 42px minmax(150px, max-content) auto;
-  column-gap: 10px;
+  width: min(330px, 100%);
+  max-width: min(330px, 100%);
+  min-height: 62px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  column-gap: 8px;
+  padding: 6px 8px;
   justify-self: start;
 }
 
 .board-wrap:not(.team-game) > .board-player-top > div,
 .board-wrap:not(.team-game) > .board-player-bottom > div {
-  width: max-content;
-  max-width: 220px;
+  width: auto;
+  max-width: none;
+}
+
+.board-wrap:not(.team-game) > .board-player-top img,
+.board-wrap:not(.team-game) > .board-player-bottom img {
+  width: 34px;
+  height: 34px;
+}
+
+.board-wrap:not(.team-game) > .board-player-top strong span,
+.board-wrap:not(.team-game) > .board-player-bottom strong span {
+  font-size: 13px;
+}
+
+.board-wrap:not(.team-game) > .board-player-top span,
+.board-wrap:not(.team-game) > .board-player-bottom span {
+  font-size: 12px;
+}
+
+.board-wrap:not(.team-game) > .board-player-top .captured-row,
+.board-wrap:not(.team-game) > .board-player-bottom .captured-row {
+  min-height: 16px;
+  font-size: 12px;
+}
+
+.board-wrap:not(.team-game) > .board-player-top b,
+.board-wrap:not(.team-game) > .board-player-bottom b {
+  font-size: 20px;
 }
 
 .board-wrap:not(.team-game) > .board-player-top {
