@@ -1456,7 +1456,7 @@ input[type="file"] {
 
 .game-layout:not(.team-game-layout) .video-panel {
   padding-left: 0;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
 .board-wrap {
@@ -2084,7 +2084,7 @@ input[type="file"] {
 }
 
 .eval-bar {
-  transform: translateX(17px) !important;
+  transform: translateX(15px) !important;
 }
 
 .eval-bar {
@@ -2134,8 +2134,8 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-top,
 .board-wrap:not(.team-game) > .board-player-bottom {
-  width: min(250px, 100%);
-  max-width: min(250px, 100%);
+  width: min(262px, 100%);
+  max-width: min(262px, 100%);
   min-height: 62px;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   column-gap: 8px;
@@ -2183,7 +2183,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: 0;
+  top: -20px;
   z-index: 3;
 }
 
