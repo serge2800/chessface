@@ -1989,7 +1989,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
-  transform: translateX(-40px);
+  transform: translateX(-43px);
 }
 
 .board-side-controls .media-actions,
@@ -2075,11 +2075,11 @@ input[type="file"] {
 }
 
 .board-stage > .board {
-  transform: translateX(60px) !important;
+  transform: translateX(62px) !important;
 }
 
 .eval-bar {
-  transform: translateX(37px) !important;
+  transform: translateX(27px) !important;
 }
 
 .eval-bar {
