@@ -2008,16 +2008,6 @@ io.on("connection", (socket) => {
     for (const player of recipients) io.to(player.socketId).emit("game:chat", message);
   });
 
-  socket.on("video:hangup", () => {
-    const game = games.get(sockets.get(socket.id)?.gameId);
-    if (!game || game.status !== "playing") return;
-    game.videoOff = true;
-    game.videoRequestFrom = null;
-    resetVideoHandshake(game);
-    emitGame(game);
-    for (const player of gamePlayers(game)) io.to(player.socketId).emit("video:hangup");
-  });
-
   socket.on("video:request", () => {
     const game = games.get(sockets.get(socket.id)?.gameId);
     if (!game || game.status !== "playing" || !game.videoOff) return;

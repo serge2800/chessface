@@ -132,7 +132,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-08-player-cards-eval-controls-v177";
+const APP_VERSION = "2026-07-08-remove-video-hangup-v178";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -488,7 +488,6 @@ gameResultShareButton?.addEventListener("click", shareAccuracyResult);
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 document.querySelector("#cameraButton").addEventListener("click", toggleCamera);
-document.querySelector("#hangupVideoButton").addEventListener("click", hangupVideoCall);
 document.querySelector("#requestVideoButton").addEventListener("click", () => socket.emit("video:request"));
 document.querySelector("#acceptVideoButton").addEventListener("click", () => socket.emit("video:accept"));
 document.querySelector("#declineVideoButton").addEventListener("click", () => socket.emit("video:decline"));
@@ -757,11 +756,6 @@ function connectSocket() {
   socket.on("webrtc:reset", async ({ gameId }) => {
     if (!currentGame || currentGame.id !== gameId || currentGame.videoOff || currentGame.status !== "playing") return;
     await startMediaAndPeer();
-  });
-  socket.on("video:hangup", () => {
-    closePeer();
-    markVideoOffLocally();
-    showNotice("Video call ended. The chess game continues.");
   });
   socket.on("video:restart", async () => {
     if (!currentGame || currentGame.status !== "playing") return;
@@ -1418,7 +1412,6 @@ function renderVideoControls(game) {
   const requestFromMe = game.videoRequestFrom === me.id;
   const requestFromOpponent = game.videoRequestFrom && game.videoRequestFrom !== me.id;
   const videoCanStayOpen = game.status === "playing" || game.status === "finished";
-  document.querySelector("#hangupVideoButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   opponentMuteButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   micButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   document.querySelector("#cameraButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
@@ -3208,12 +3201,6 @@ function waitForVideoReady(video) {
     video.addEventListener("canplay", done, { once: true });
     window.setTimeout(done, 1200);
   });
-}
-
-function hangupVideoCall() {
-  closePeer();
-  markVideoOffLocally();
-  socket.emit("video:hangup");
 }
 
 function markVideoOffLocally() {

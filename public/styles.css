@@ -1989,7 +1989,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
-  transform: translateX(-46px);
+  transform: translateX(-47px);
 }
 
 .board-side-controls .media-actions,
@@ -2006,7 +2006,6 @@ input[type="file"] {
 .board-side-controls #micButton,
 .board-side-controls #opponentMuteButton,
 .board-side-controls #cameraButton,
-.board-side-controls #hangupVideoButton,
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
 .board-side-controls .takeback-request-button,
@@ -2079,7 +2078,7 @@ input[type="file"] {
 }
 
 .eval-bar {
-  transform: translateX(22px) !important;
+  transform: translateX(17px) !important;
 }
 
 .eval-bar {
@@ -3214,18 +3213,9 @@ body[data-board-theme="wood"] {
   line-height: 1.1;
 }
 
-.hangup-video-button {
-  display: grid;
-  gap: 1px;
-  align-content: center;
-  justify-items: center;
-  min-height: 40px;
-}
-
 #micButton,
 #opponentMuteButton,
 #cameraButton,
-#hangupVideoButton,
 #offerDrawButton,
 #resignButton,
 #addOpponentButton {
