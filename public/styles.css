@@ -2003,6 +2003,9 @@ input[type="file"] {
   margin-top: 0;
 }
 
+.board-side-controls #micButton,
+.board-side-controls #opponentMuteButton,
+.board-side-controls #cameraButton,
 .board-side-controls #hangupVideoButton,
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
@@ -2073,7 +2076,7 @@ input[type="file"] {
 
 .board-stage > .board,
 .eval-bar {
-  transform: translateX(52px) !important;
+  transform: translateX(57px) !important;
 }
 
 .eval-bar {
