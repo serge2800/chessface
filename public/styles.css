@@ -2080,11 +2080,11 @@ input[type="file"] {
 }
 
 .board-stage > .board {
-  transform: translate(62px, 2px) !important;
+  transform: translate(62px, 3px) !important;
 }
 
 .eval-bar {
-  transform: translateX(15px) !important;
+  transform: translateX(13px) !important;
 }
 
 .eval-bar {
@@ -2183,7 +2183,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: -40px;
+  top: -55px;
   z-index: 3;
 }
 
