@@ -1715,19 +1715,34 @@ input[type="file"] {
 .board-animation-slots {
   position: absolute;
   top: 0;
-  left: calc(100% + 8px);
-  width: 136px;
-  display: grid;
-  gap: 8px;
+  bottom: 0;
+  left: calc(100% - 14px);
+  width: 170px;
   pointer-events: none;
 }
 
 .board-animation-slot {
-  height: clamp(150px, calc((var(--play-surface-size) + var(--board-top-lift) - 16px) / 3), 192px);
-  border: 1px solid rgba(255, 255, 255, 0.96);
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border: 2px solid rgba(255, 255, 255, 0.96);
   border-radius: 0;
   background: rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
+}
+
+.board-animation-slot-top {
+  top: 96px;
+  height: 250px;
+}
+
+.board-animation-slot-middle {
+  display: none;
+}
+
+.board-animation-slot-bottom {
+  bottom: 106px;
+  height: 250px;
 }
 
 .takeback-request-button {
