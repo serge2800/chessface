@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-08-eval-left-controls-up-v191" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-08-animation-slots-v192" />
   </head>
   <body>
     <main class="shell">
@@ -267,6 +267,11 @@
                 <button type="button" class="takeback-request-button hidden" id="takebackRequestButton">Takeback request</button>
                 <button type="button" class="turn-status-button hidden" id="turnStatusButton" disabled>Your Turn</button>
                 <button type="button" class="accept-beg-takeback-button hidden" id="acceptBegTakebackButton" disabled>Accept request</button>
+                <div class="board-animation-slots" aria-label="Evaluation animation slots">
+                  <div class="board-animation-slot board-animation-slot-top" aria-hidden="true"></div>
+                  <div class="board-animation-slot board-animation-slot-middle" aria-hidden="true"></div>
+                  <div class="board-animation-slot board-animation-slot-bottom" aria-hidden="true"></div>
+                </div>
               </div>
               <div class="donkey-mood-slots" id="donkeyMoodSlots" aria-label="Player position moods">
                 <div class="donkey-mood donkey-mood-top" aria-label="Top player position mood">

@@ -1712,6 +1712,24 @@ input[type="file"] {
   filter: grayscale(0.4);
 }
 
+.board-animation-slots {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 136px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.board-animation-slot {
+  height: clamp(150px, calc((var(--play-surface-size) + var(--board-top-lift) - 16px) / 3), 192px);
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
 .takeback-request-button {
   width: 100%;
   min-height: 46px;
@@ -1995,6 +2013,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
+  position: relative;
   transform: translate(-48px, -6px);
 }
 
@@ -2183,7 +2202,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: -72px;
+  top: -71px;
   z-index: 3;
 }
 
@@ -3451,6 +3470,10 @@ body[data-board-theme="wood"] {
     margin-top: 0;
     order: 2;
     padding-top: 0;
+  }
+
+  .board-animation-slots {
+    display: none;
   }
 
   .donkey-mood-slots {
