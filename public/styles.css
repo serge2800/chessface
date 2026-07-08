@@ -2084,7 +2084,7 @@ input[type="file"] {
 }
 
 .eval-bar {
-  transform: translateX(13px) !important;
+  transform: translate(13px, 1px) !important;
 }
 
 .eval-bar {
@@ -2183,7 +2183,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: -68px;
+  top: -72px;
   z-index: 3;
 }
 
