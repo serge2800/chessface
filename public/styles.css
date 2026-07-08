@@ -1995,7 +1995,7 @@ input[type="file"] {
   margin-top: calc(-1 * var(--board-top-lift));
   padding-top: 82px;
   min-width: 0;
-  transform: translate(-48px, -4px);
+  transform: translate(-48px, -5px);
 }
 
 .board-side-controls .media-actions,
@@ -2084,7 +2084,7 @@ input[type="file"] {
 }
 
 .eval-bar {
-  transform: translate(13px, 1px) !important;
+  transform: translate(13px, 2px) !important;
 }
 
 .eval-bar {
@@ -2178,7 +2178,7 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-top {
   position: relative;
-  top: -14px;
+  top: -15px;
 }
 
 .board-wrap:not(.team-game) > .board-player-bottom {
