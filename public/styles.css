@@ -1717,7 +1717,7 @@ input[type="file"] {
   top: 0;
   bottom: 0;
   left: calc(100% - 13px);
-  width: 164px;
+  width: 161px;
   pointer-events: none;
 }
 
@@ -1732,7 +1732,7 @@ input[type="file"] {
 }
 
 .board-animation-slot-top {
-  top: 96px;
+  top: 90px;
   height: 250px;
 }
 
@@ -1741,7 +1741,7 @@ input[type="file"] {
 }
 
 .board-animation-slot-bottom {
-  bottom: 106px;
+  bottom: 94px;
   height: 250px;
 }
 
