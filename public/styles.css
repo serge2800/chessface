@@ -1716,8 +1716,8 @@ input[type="file"] {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(100% - 14px);
-  width: 170px;
+  left: calc(100% - 13px);
+  width: 164px;
   pointer-events: none;
 }
 
