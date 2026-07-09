@@ -135,7 +135,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-eval-video-fallback-v215";
+const APP_VERSION = "2026-07-09-smoother-move-render-v216";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -968,6 +968,8 @@ function applyMatchmakingSlide(index) {
 
 function renderGame(game) {
   const previousFen = currentGame?.fen;
+  const previousColor = currentGame?.color;
+  const boardPositionChanged = !previousFen || previousFen !== game.fen || previousColor !== game.color;
   syncPlayerSoundSettings(game.soundSettings);
   currentGame = game;
   gameLayout?.classList.toggle("team-game-layout", game.kind === "team");
@@ -987,8 +989,8 @@ function renderGame(game) {
   renderBoardPlayers(game);
   renderTeamRoster(game);
   updateOpponentProfileActions(game);
-  renderBoard(game.fen, game.color);
-  requestLiveEvaluation(game.fen);
+  if (boardPositionChanged) renderBoard(game.fen, game.color);
+  if (!previousFen || previousFen !== game.fen) requestLiveEvaluation(game.fen);
   renderVideoControls(game);
   if (liveKitRoom && game.status === "playing" && !game.videoOff) scheduleLiveKitSync(liveKitRoom);
   if (!requiresLiveKitVideo(game)) syncPeerNegotiations();
