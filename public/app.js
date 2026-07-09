@@ -135,7 +135,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-hide-takeback-after-game-v214";
+const APP_VERSION = "2026-07-09-eval-video-fallback-v215";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -165,11 +165,12 @@ const DONKEY_MOODS = [
   { id: "7-losing-worse", src: "/assets/eval/7.mov", label: "Worse", max: -150 },
   { id: "6-losing-slightly", src: "/assets/eval/6.mov", label: "Slightly worse", max: -30 },
   { id: "5-balanced", src: "/assets/eval/5.mov", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", src: "/assets/eval/4.mov", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", src: "/assets/eval/3.mov", label: "Good", max: 300 },
-  { id: "2-winning-very-good", src: "/assets/eval/2.mov", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", src: "/assets/eval/1.mov", label: "Winning big", max: Infinity }
+  { id: "4-winning-slightly", src: "/assets/eval/5.mov", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", src: "/assets/eval/5.mov", label: "Good", max: 300 },
+  { id: "2-winning-very-good", src: "/assets/eval/5.mov", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", src: "/assets/eval/5.mov", label: "Winning big", max: Infinity }
 ];
+const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
 let selectedSquare;
 let pendingPremove = null;
 let playingPremove = false;
@@ -1733,6 +1734,15 @@ function setDonkeyMood(video, mood) {
     video.classList.remove("is-changing");
   }, 90);
 }
+
+[topDonkeyMood, bottomDonkeyMood].forEach((video) => {
+  video?.addEventListener("error", () => {
+    if (video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) return;
+    video.src = DONKEY_VIDEO_FALLBACK_SRC;
+    video.load();
+    video.play().catch(() => {});
+  });
+});
 
 function scoreToWhiteCentipawns(score, fen) {
   const sideToMove = String(fen || "").split(" ")[1] || "w";
