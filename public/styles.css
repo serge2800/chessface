@@ -1741,7 +1741,7 @@ input[type="file"] {
 }
 
 .board-animation-slot-bottom {
-  top: calc(100% - 275px);
+  top: calc(100% - 270px);
   height: 205px;
 }
 
