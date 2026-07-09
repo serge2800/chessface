@@ -1741,8 +1741,9 @@ input[type="file"] {
 }
 
 .board-animation-slot-bottom {
-  bottom: 78px;
+  bottom: 86px;
   height: 250px;
+  transform: translateY(8px);
 }
 
 .takeback-request-button {
