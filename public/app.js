@@ -135,7 +135,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-eval-bar-down-1-v217";
+const APP_VERSION = "2026-07-09-optimistic-move-preview-v218";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1927,6 +1927,80 @@ function pieceAtSquare(square, fen = currentGame?.fen) {
   return "";
 }
 
+function fenBoardToSquares(fen) {
+  const squares = {};
+  const rows = String(fen || "").split(" ")[0].split("/");
+  rows.forEach((row, rowIndex) => {
+    let fileIndex = 0;
+    for (const char of row) {
+      if (/\d/.test(char)) {
+        fileIndex += Number(char);
+      } else {
+        squares[`${"abcdefgh"[fileIndex]}${8 - rowIndex}`] = char;
+        fileIndex += 1;
+      }
+    }
+  });
+  return squares;
+}
+
+function squaresToFenBoard(squares) {
+  const rows = [];
+  for (let rank = 8; rank >= 1; rank -= 1) {
+    let row = "";
+    let empty = 0;
+    for (const file of "abcdefgh") {
+      const piece = squares[`${file}${rank}`];
+      if (!piece) {
+        empty += 1;
+      } else {
+        if (empty) row += String(empty);
+        empty = 0;
+        row += piece;
+      }
+    }
+    if (empty) row += String(empty);
+    rows.push(row);
+  }
+  return rows.join("/");
+}
+
+function optimisticFenAfterMove(fen, from, to, promotion = "") {
+  if (!fen || !from || !to) return "";
+  const parts = fen.split(" ");
+  const squares = fenBoardToSquares(fen);
+  const piece = squares[from];
+  if (!piece) return "";
+  const fromFile = from.charCodeAt(0);
+  const toFile = to.charCodeAt(0);
+  const fromRank = Number(from[1]);
+  const toRank = Number(to[1]);
+  const isWhitePiece = piece === piece.toUpperCase();
+  delete squares[from];
+
+  if (piece.toLowerCase() === "p" && fromFile !== toFile && !squares[to]) {
+    delete squares[`${to[0]}${fromRank}`];
+  }
+
+  if (piece.toLowerCase() === "k" && Math.abs(toFile - fromFile) === 2) {
+    const rank = from[1];
+    if (toFile > fromFile) {
+      squares[`f${rank}`] = squares[`h${rank}`];
+      delete squares[`h${rank}`];
+    } else {
+      squares[`d${rank}`] = squares[`a${rank}`];
+      delete squares[`a${rank}`];
+    }
+  }
+
+  const promotedPiece = promotion && piece.toLowerCase() === "p" && (toRank === 1 || toRank === 8)
+    ? (isWhitePiece ? promotion.toUpperCase() : promotion.toLowerCase())
+    : piece;
+  squares[to] = promotedPiece;
+  parts[0] = squaresToFenBoard(squares);
+  return parts.join(" ");
+}
+
 function canMovePiece(piece) {
   if (!piece || !currentGame || currentGame.status !== "playing") return false;
   return isOwnPiece(piece) && (isMyTurn(currentGame) || canUsePremoves(currentGame));
@@ -1995,6 +2069,9 @@ async function makeMove(from, to) {
     return;
   }
   socket.emit("game:move", { from, to, ...(promotion ? { promotion } : {}) });
+  const optimisticFen = optimisticFenAfterMove(currentGame.fen, from, to, promotion);
+  selectedSquare = null;
+  if (optimisticFen) renderBoard(optimisticFen, currentGame.color);
 }
 
 async function promotionForMove(from, to) {
