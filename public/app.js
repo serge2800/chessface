@@ -132,7 +132,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-animation-slot-bottom-down-v206";
+const APP_VERSION = "2026-07-09-beg-now-turn-prompt-v207";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1280,9 +1280,16 @@ function updateTurnRandomSoundButton(game, myTurn) {
 function updateTurnStatusButton(game, myTurn) {
   if (!turnStatusButton) return;
   const visible = game.status === "playing";
+  const shouldBegNow = shouldShowBegNowTurnPrompt(game);
   turnStatusButton.classList.toggle("hidden", !visible);
   turnStatusButton.classList.toggle("is-your-turn", Boolean(visible && myTurn));
-  turnStatusButton.textContent = myTurn ? "Your Turn" : opponentTurnLabel(game);
+  turnStatusButton.classList.toggle("is-beg-now", Boolean(visible && shouldBegNow));
+  turnStatusButton.textContent = shouldBegNow ? "BEG NOW" : myTurn ? "Your Turn" : opponentTurnLabel(game);
+}
+
+function shouldShowBegNowTurnPrompt(game) {
+  const request = game?.takeback?.request;
+  return Boolean(request?.status === "begging" && request.isRequester);
 }
 
 function updateTakebackControls(game, myTurn) {
