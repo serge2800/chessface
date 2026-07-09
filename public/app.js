@@ -50,6 +50,7 @@ const playerColor = document.querySelector("#playerColor");
 const drawBox = document.querySelector("#drawBox");
 const drawText = document.querySelector("#drawText");
 const takebackRequestModal = document.querySelector("#takebackRequestModal");
+const takebackRequestPrompt = takebackRequestModal?.querySelector("p");
 const acceptTakebackButton = document.querySelector("#acceptTakebackButton");
 const rejectTakebackButton = document.querySelector("#rejectTakebackButton");
 const begTakebackButton = document.querySelector("#begTakebackButton");
@@ -132,7 +133,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-beg-now-turn-prompt-v207";
+const APP_VERSION = "2026-07-09-beg-final-decision-v208";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1296,6 +1297,8 @@ function updateTakebackControls(game, myTurn) {
   const takeback = game?.takeback || {};
   const request = takeback.request;
   const isReceiver = Boolean(request?.isReceiver);
+  const isPendingRequest = Boolean(isReceiver && request?.status === "pending");
+  const isBeggingRequest = Boolean(isReceiver && request?.status === "begging");
   const canShowRequest = game?.status === "playing" && game.kind !== "team";
   if (takebackRequestButton) {
     takebackRequestButton.classList.toggle("hidden", !canShowRequest);
@@ -1313,14 +1316,27 @@ function updateTakebackControls(game, myTurn) {
           : "Request to undo your last move.";
   }
   if (takebackRequestModal) {
-    takebackRequestModal.classList.toggle("hidden", !(isReceiver && request.status === "pending"));
+    takebackRequestModal.classList.toggle("hidden", !(isPendingRequest || isBeggingRequest));
+  }
+  if (takebackRequestPrompt) {
+    takebackRequestPrompt.textContent = isBeggingRequest
+      ? "Decide whether to approve the takeback after the beg."
+      : "Your opponent requests a takeback.";
+  }
+  if (acceptTakebackButton) {
+    acceptTakebackButton.textContent = isBeggingRequest ? "Approve takeback" : "Accept";
+  }
+  if (rejectTakebackButton) {
+    rejectTakebackButton.textContent = isBeggingRequest ? "Reject takeback" : "Reject";
+  }
+  if (begTakebackButton) {
+    begTakebackButton.classList.toggle("hidden", !isPendingRequest);
   }
   if (acceptBegTakebackButton) {
-    const isBegging = Boolean(isReceiver && request?.status === "begging");
-    acceptBegTakebackButton.classList.toggle("hidden", !canShowRequest);
-    acceptBegTakebackButton.classList.toggle("is-begging", isBegging);
-    acceptBegTakebackButton.disabled = !isBegging;
-    acceptBegTakebackButton.textContent = isBegging ? "Approve the beg" : "Approve beg";
+    acceptBegTakebackButton.classList.add("hidden");
+    acceptBegTakebackButton.classList.remove("is-begging");
+    acceptBegTakebackButton.disabled = true;
+    acceptBegTakebackButton.textContent = "Approve beg";
   }
 }
 
