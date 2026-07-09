@@ -135,7 +135,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-compact-visible-takeback-v213";
+const APP_VERSION = "2026-07-09-hide-takeback-after-game-v214";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1301,16 +1301,16 @@ function updateTurnStatusButton(game, myTurn) {
 
 function shouldShowBegNowTurnPrompt(game) {
   const request = game?.takeback?.request;
-  return Boolean(request?.status === "begging" && request.isRequester);
+  return Boolean(game?.status === "playing" && request?.status === "begging" && request.isRequester);
 }
 
 function updateTakebackControls(game, myTurn) {
   const takeback = game?.takeback || {};
   const request = takeback.request;
   const isReceiver = Boolean(request?.isReceiver);
-  const isPendingRequest = Boolean(isReceiver && request?.status === "pending");
-  const isBeggingRequest = Boolean(isReceiver && request?.status === "begging");
   const canShowRequest = game?.status === "playing" && game.kind !== "team";
+  const isPendingRequest = Boolean(canShowRequest && isReceiver && request?.status === "pending");
+  const isBeggingRequest = Boolean(canShowRequest && isReceiver && request?.status === "begging");
   if (takebackRequestButton) {
     takebackRequestButton.classList.toggle("hidden", !canShowRequest);
     const outOfRequests = Number(takeback.remaining || 0) <= 0;
