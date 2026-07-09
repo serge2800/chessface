@@ -133,7 +133,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-compact-takeback-modal-v210";
+const APP_VERSION = "2026-07-09-eval-donkey-videos-v211";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -157,16 +157,16 @@ let liveEvalCleanup = null;
 let liveEvalTimer = null;
 let liveEvalSearchId = 0;
 const DONKEY_MOODS = [
-  { id: "about-to-get-mated", src: "/assets/donkeys/01-about-to-get-mated.png", label: "About to get mated", max: -800 },
-  { id: "terrified", src: "/assets/donkeys/02-terrified.png", label: "Terrified", max: -500 },
-  { id: "panicking", src: "/assets/donkeys/03-panicking.png", label: "Panicking", max: -300 },
-  { id: "worried", src: "/assets/donkeys/04-worried.png", label: "Worried", max: -150 },
-  { id: "slightly-bad", src: "/assets/donkeys/05-slightly-bad.png", label: "Slightly bad", max: -30 },
-  { id: "balanced", src: "/assets/donkeys/06-balanced.png", label: "Balanced", max: 30 },
-  { id: "slightly-good", src: "/assets/donkeys/07-slightly-good.png", label: "Slightly good", max: 150 },
-  { id: "happy", src: "/assets/donkeys/08-happy.png", label: "Happy", max: 300 },
-  { id: "very-good", src: "/assets/donkeys/09-very-good.png", label: "Very good", max: 500 },
-  { id: "about-to-mate", src: "/assets/donkeys/10-about-to-mate.png", label: "About to mate", max: Infinity }
+  { id: "10-losing-crushed", src: "/assets/eval/10.mp4", label: "Losing badly", max: -800 },
+  { id: "9-losing-horrible", src: "/assets/eval/9.mp4", label: "Very bad", max: -500 },
+  { id: "8-losing-danger", src: "/assets/eval/8.mp4", label: "In danger", max: -300 },
+  { id: "7-losing-worse", src: "/assets/eval/7.mp4", label: "Worse", max: -150 },
+  { id: "6-losing-slightly", src: "/assets/eval/6.mp4", label: "Slightly worse", max: -30 },
+  { id: "5-balanced", src: "/assets/eval/5.mp4", label: "Balanced", max: 30 },
+  { id: "4-winning-slightly", src: "/assets/eval/4.mp4", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", src: "/assets/eval/3.mp4", label: "Good", max: 300 },
+  { id: "2-winning-very-good", src: "/assets/eval/2.mp4", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", src: "/assets/eval/1.mp4", label: "Winning big", max: Infinity }
 ];
 let selectedSquare;
 let pendingPremove = null;
@@ -1717,14 +1717,16 @@ function donkeyMoodForColor(color, whiteCentipawns) {
   return DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || DONKEY_MOODS[5];
 }
 
-function setDonkeyMood(image, mood) {
-  if (!image || !mood || image.dataset.mood === mood.id) return;
-  image.dataset.mood = mood.id;
-  image.classList.add("is-changing");
+function setDonkeyMood(video, mood) {
+  if (!video || !mood || video.dataset.mood === mood.id) return;
+  video.dataset.mood = mood.id;
+  video.classList.add("is-changing");
   window.setTimeout(() => {
-    image.src = mood.src;
-    image.alt = mood.label + " position mood";
-    image.classList.remove("is-changing");
+    video.src = mood.src;
+    video.setAttribute("aria-label", mood.label + " position mood");
+    video.load();
+    video.play().catch(() => {});
+    video.classList.remove("is-changing");
   }, 90);
 }
 
