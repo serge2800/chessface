@@ -1733,7 +1733,7 @@ input[type="file"] {
 
 .board-animation-slot-top {
   top: 82px;
-  height: 235px;
+  height: 225px;
 }
 
 .board-animation-slot-middle {
@@ -1741,8 +1741,8 @@ input[type="file"] {
 }
 
 .board-animation-slot-bottom {
-  top: calc(100% - 305px);
-  height: 235px;
+  top: calc(100% - 295px);
+  height: 225px;
 }
 
 .takeback-request-button {
