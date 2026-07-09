@@ -133,7 +133,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-eval-donkey-videos-v211";
+const APP_VERSION = "2026-07-09-eval-donkey-mov-v212";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -157,16 +157,16 @@ let liveEvalCleanup = null;
 let liveEvalTimer = null;
 let liveEvalSearchId = 0;
 const DONKEY_MOODS = [
-  { id: "10-losing-crushed", src: "/assets/eval/10.mp4", label: "Losing badly", max: -800 },
-  { id: "9-losing-horrible", src: "/assets/eval/9.mp4", label: "Very bad", max: -500 },
-  { id: "8-losing-danger", src: "/assets/eval/8.mp4", label: "In danger", max: -300 },
-  { id: "7-losing-worse", src: "/assets/eval/7.mp4", label: "Worse", max: -150 },
-  { id: "6-losing-slightly", src: "/assets/eval/6.mp4", label: "Slightly worse", max: -30 },
-  { id: "5-balanced", src: "/assets/eval/5.mp4", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", src: "/assets/eval/4.mp4", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", src: "/assets/eval/3.mp4", label: "Good", max: 300 },
-  { id: "2-winning-very-good", src: "/assets/eval/2.mp4", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", src: "/assets/eval/1.mp4", label: "Winning big", max: Infinity }
+  { id: "10-losing-crushed", src: "/assets/eval/10.mov", label: "Losing badly", max: -800 },
+  { id: "9-losing-horrible", src: "/assets/eval/9.mov", label: "Very bad", max: -500 },
+  { id: "8-losing-danger", src: "/assets/eval/8.mov", label: "In danger", max: -300 },
+  { id: "7-losing-worse", src: "/assets/eval/7.mov", label: "Worse", max: -150 },
+  { id: "6-losing-slightly", src: "/assets/eval/6.mov", label: "Slightly worse", max: -30 },
+  { id: "5-balanced", src: "/assets/eval/5.mov", label: "Balanced", max: 30 },
+  { id: "4-winning-slightly", src: "/assets/eval/4.mov", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", src: "/assets/eval/3.mov", label: "Good", max: 300 },
+  { id: "2-winning-very-good", src: "/assets/eval/2.mov", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", src: "/assets/eval/1.mov", label: "Winning big", max: Infinity }
 ];
 let selectedSquare;
 let pendingPremove = null;
