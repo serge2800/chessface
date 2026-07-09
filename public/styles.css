@@ -2824,41 +2824,48 @@ body[data-board-theme="wood"] {
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(2, 8, 7, 0.48);
-  backdrop-filter: blur(6px);
+  background: rgba(2, 8, 7, 0.18);
 }
 
 .takeback-request-card {
-  width: min(330px, calc(100vw - 36px));
+  width: min(292px, calc(100vw - 36px));
   display: grid;
-  gap: 12px;
-  padding: 14px 16px 16px;
+  gap: 10px;
+  padding: 12px 14px 14px;
   border: 1px solid rgba(242, 198, 109, 0.34);
   border-radius: 8px;
   background: rgba(14, 20, 21, 0.98);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44);
 }
 
+.takeback-request-card.is-final-decision {
+  width: min(268px, calc(100vw - 36px));
+}
+
 .takeback-request-card p {
   margin: 0;
   color: var(--ink);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 720;
   line-height: 1.25;
+  text-align: center;
 }
 
 .takeback-request-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(106px, max-content));
-  gap: 8px;
-  justify-content: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.takeback-request-actions.is-final-decision {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .takeback-request-actions button {
-  min-width: 106px;
-  min-height: 38px;
-  padding: 8px 12px;
-  font-size: 15px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 8px;
+  font-size: 13px;
   font-weight: 720;
   line-height: 1.12;
 }

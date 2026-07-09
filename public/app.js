@@ -50,7 +50,9 @@ const playerColor = document.querySelector("#playerColor");
 const drawBox = document.querySelector("#drawBox");
 const drawText = document.querySelector("#drawText");
 const takebackRequestModal = document.querySelector("#takebackRequestModal");
+const takebackRequestCard = takebackRequestModal?.querySelector(".takeback-request-card");
 const takebackRequestPrompt = takebackRequestModal?.querySelector("p");
+const takebackRequestActions = takebackRequestModal?.querySelector(".takeback-request-actions");
 const acceptTakebackButton = document.querySelector("#acceptTakebackButton");
 const rejectTakebackButton = document.querySelector("#rejectTakebackButton");
 const begTakebackButton = document.querySelector("#begTakebackButton");
@@ -133,7 +135,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-eval-donkey-mov-v212";
+const APP_VERSION = "2026-07-09-compact-visible-takeback-v213";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1327,6 +1329,8 @@ function updateTakebackControls(game, myTurn) {
   if (takebackRequestModal) {
     takebackRequestModal.classList.toggle("hidden", !(isPendingRequest || isBeggingRequest));
   }
+  takebackRequestCard?.classList.toggle("is-final-decision", isBeggingRequest);
+  takebackRequestActions?.classList.toggle("is-final-decision", isBeggingRequest);
   if (takebackRequestPrompt) {
     takebackRequestPrompt.textContent = isBeggingRequest
       ? "Decide whether to approve the takeback after the beg."
