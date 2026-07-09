@@ -133,7 +133,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-09-beg-final-decision-v208";
+const APP_VERSION = "2026-07-09-instant-cancel-seek-v209";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -438,8 +438,8 @@ declineChallengeButton.addEventListener("click", () => {
   challengeBox.classList.add("hidden");
   pendingChallengeId = null;
 });
-cancelSeekButton.addEventListener("click", () => socket.emit("queue:leave"));
-cancelSeekPanelButton.addEventListener("click", () => socket.emit("queue:leave"));
+cancelSeekButton.addEventListener("click", leaveQueue);
+cancelSeekPanelButton.addEventListener("click", leaveQueue);
 document.querySelector("#offerDrawButton").addEventListener("click", () => {
   if (settings.confirmActions && !window.confirm("Offer a draw?")) return;
   socket.emit("game:draw:offer");
@@ -927,6 +927,15 @@ function hideSeeking() {
   stopMatchmakingRotation();
   seekingPanel.classList.add("hidden");
   if (!currentGame) lobby.classList.remove("hidden");
+}
+
+function leaveQueue() {
+  seekButton.disabled = false;
+  seekTeamButton.disabled = false;
+  cancelSeekButton.classList.add("hidden");
+  statusTitle.textContent = "Choose a time control";
+  hideSeeking();
+  socket.emit("queue:leave");
 }
 
 function startMatchmakingRotation() {
