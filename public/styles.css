@@ -2813,6 +2813,44 @@ body[data-board-theme="wood"] {
   min-height: 48px;
 }
 
+.result-share-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.result-share-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.result-share-link input {
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.32);
+  font: inherit;
+  font-size: 13px;
+}
+
+.result-share-link button,
+.result-share-actions button {
+  min-height: 42px;
+}
+
+.result-share-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
 
 .takeback-request-modal {
   position: fixed;

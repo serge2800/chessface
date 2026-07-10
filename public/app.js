@@ -104,6 +104,14 @@ const gameResultContinueVideoButton = document.querySelector("#gameResultContinu
 const gameResultEndCallButton = document.querySelector("#gameResultEndCallButton");
 const gameResultAnalysisButton = document.querySelector("#gameResultAnalysisButton");
 const gameResultShareButton = document.querySelector("#gameResultShareButton");
+const resultSharePanel = document.querySelector("#resultSharePanel");
+const resultShareLink = document.querySelector("#resultShareLink");
+const copyResultLinkButton = document.querySelector("#copyResultLinkButton");
+const nativeShareResultButton = document.querySelector("#nativeShareResultButton");
+const facebookShareResultButton = document.querySelector("#facebookShareResultButton");
+const whatsappShareResultButton = document.querySelector("#whatsappShareResultButton");
+const xShareResultButton = document.querySelector("#xShareResultButton");
+const copySocialResultButton = document.querySelector("#copySocialResultButton");
 const accuracyAnalysisStatus = document.querySelector("#accuracyAnalysisStatus");
 const accuracyAnalysisPanel = document.querySelector("#accuracyAnalysisPanel");
 
@@ -136,7 +144,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-random-sound-echo-guard-v225";
+const APP_VERSION = "2026-07-10-result-share-panel-v226";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -491,6 +499,12 @@ gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTe
 gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
 gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
 gameResultShareButton?.addEventListener("click", shareAccuracyResult);
+copyResultLinkButton?.addEventListener("click", () => copyResultShareText({ social: false }));
+copySocialResultButton?.addEventListener("click", () => copyResultShareText({ social: true }));
+nativeShareResultButton?.addEventListener("click", nativeShareAccuracyResult);
+facebookShareResultButton?.addEventListener("click", () => openShareUrl("facebook"));
+whatsappShareResultButton?.addEventListener("click", () => openShareUrl("whatsapp"));
+xShareResultButton?.addEventListener("click", () => openShareUrl("x"));
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 cameraButton.addEventListener("click", toggleCamera);
@@ -1052,6 +1066,8 @@ function maybeShowGameResultDialog(game) {
   gameResultScore.textContent = score;
   gameResultDetails.textContent = isDraw ? resultLine : `${resultLine}${won ? " You win!" : ""}`;
   accuracyAnalysisPanel?.classList.add("hidden");
+  resultSharePanel?.classList.add("hidden");
+  if (resultShareLink) resultShareLink.value = "";
   if (accuracyAnalysisStatus) accuracyAnalysisStatus.textContent = game.accuracyAnalysis ? "Accuracy analysis complete." : "Analyzing accuracy...";
   gameResultModal.classList.remove("hidden");
 }
@@ -1228,20 +1244,81 @@ function openCurrentGameAnalysis() {
 }
 
 async function shareAccuracyResult() {
+  showResultSharePanel();
+  if (navigator.share) await nativeShareAccuracyResult();
+}
+
+function resultShareUrl() {
+  const url = new URL("/analysis.html", window.location.origin);
+  if (currentGame?.id) url.searchParams.set("game", currentGame.id);
+  url.searchParams.set("analyze", "1");
+  return url.toString();
+}
+
+function resultShareText() {
   const analysis = currentGame?.accuracyAnalysis;
-  const text = analysis
+  return analysis
     ? `ChessFace Accuracy: White ${analysis.white.accuracy}% vs Black ${analysis.black.accuracy}%`
     : `ChessFace result: ${gameResultLine(currentGame || {})}`;
+}
+
+function showResultSharePanel() {
+  if (!resultSharePanel || !resultShareLink) return;
+  resultShareLink.value = resultShareUrl();
+  resultSharePanel.classList.remove("hidden");
+}
+
+async function nativeShareAccuracyResult() {
+  const text = resultShareText();
+  const url = resultShareUrl();
   try {
     if (navigator.share) {
-      await navigator.share({ title: "ChessFace Accuracy Analysis", text, url: location.href });
+      await navigator.share({ title: "ChessFace Accuracy Analysis", text, url });
     } else {
-      await navigator.clipboard?.writeText(`${text} ${location.href}`);
-      showNotice("Result copied.");
+      await copyToClipboard(`${text} ${url}`);
+      showNotice("Result link copied.");
     }
   } catch {
     // Sharing can be cancelled by the user.
   }
+}
+
+async function copyResultShareText({ social = false } = {}) {
+  const text = resultShareText();
+  const url = resultShareUrl();
+  const suffix = social ? "\n\nPaste this link into your Instagram or TikTok post/story." : "";
+  await copyToClipboard(`${text}\n${url}${suffix}`);
+  showNotice(social ? "Result copied for Instagram/TikTok." : "Result link copied.");
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    const helper = document.createElement("textarea");
+    helper.value = text;
+    helper.setAttribute("readonly", "");
+    helper.style.position = "fixed";
+    helper.style.left = "-9999px";
+    document.body.append(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+  }
+}
+
+function openShareUrl(platform) {
+  const text = resultShareText();
+  const url = resultShareUrl();
+  const encodedUrl = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(`${text} ${url}`);
+  const links = {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    whatsapp: `https://wa.me/?text=${encodedText}`,
+    x: `https://twitter.com/intent/tweet?text=${encodedText}`
+  };
+  const shareUrl = links[platform];
+  if (shareUrl) window.open(shareUrl, "_blank", "noopener,noreferrer");
 }
 
 function clearPostGameVideoTimer() {
