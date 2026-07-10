@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-10-camera-overlay-controls-v221" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-10-camera-tile-icon-controls-v223" />
   </head>
   <body>
     <main class="shell">
@@ -309,17 +309,19 @@
           </section>
 
           <aside class="video-panel">
-            <div class="video-control-overlay" aria-label="Camera controls">
-              <button type="button" class="video-icon-button" id="micButton" data-icon="M" aria-label="Mute me" title="Mute me"></button>
-              <button type="button" class="video-icon-button" id="opponentMuteButton" data-icon="O" aria-label="Mute opponent" title="Mute opponent"></button>
-              <button type="button" class="video-icon-button" id="cameraButton" data-icon="C" aria-label="Camera off" title="Camera off"></button>
-            </div>
             <div class="video-grid" id="videoGrid">
               <div class="video-tile remote-video-tile" data-peer-slot="primary">
+                <div class="video-control-overlay video-control-overlay-opponent" aria-label="Opponent camera controls">
+                  <button type="button" class="video-icon-button video-icon-mic" id="opponentMuteButton" aria-label="Mute opponent" title="Mute opponent"></button>
+                </div>
                 <video id="remoteVideo" autoplay playsinline></video>
                 <span id="remoteVideoLabel">Opponent</span>
               </div>
               <div class="video-tile local-video-tile" data-peer-id="self">
+                <div class="video-control-overlay video-control-overlay-self" aria-label="My camera controls">
+                  <button type="button" class="video-icon-button video-icon-mic" id="micButton" aria-label="Mute me" title="Mute me"></button>
+                  <button type="button" class="video-icon-button video-icon-camera" id="cameraButton" aria-label="Camera off" title="Camera off"></button>
+                </div>
                 <video id="localVideo" autoplay playsinline muted></video>
                 <span id="localVideoLabel">You</span>
               </div>

@@ -136,7 +136,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-camera-overlay-controls-v221";
+const APP_VERSION = "2026-07-10-camera-tile-icon-controls-v223";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -3378,7 +3378,7 @@ function toggleMic() {
 function applyLocalAudioState() {
   const audio = localStream?.getAudioTracks()[0];
   if (audio) audio.enabled = !meAudioMuted;
-  setVideoIconButton(micButton, "M", meAudioMuted ? "Unmute me" : "Mute me", meAudioMuted);
+  setVideoIconButton(micButton, meAudioMuted ? "Unmute me" : "Mute me", meAudioMuted);
 }
 
 async function toggleOpponentAudio() {
@@ -3409,7 +3409,7 @@ function applyOpponentAudioState() {
     if (!shouldMute) audio.play?.().catch(() => {});
   });
   const target = currentGame?.kind === "team" ? "others" : "opponent";
-  setVideoIconButton(opponentMuteButton, "O", opponentAudioMuted ? `Unmute ${target}` : `Mute ${target}`, opponentAudioMuted);
+  setVideoIconButton(opponentMuteButton, opponentAudioMuted ? `Unmute ${target}` : `Mute ${target}`, opponentAudioMuted);
 }
 
 function toggleCamera() {
@@ -3420,12 +3420,11 @@ function toggleCamera() {
   const enabled = !video.enabled;
   if (rawVideo) rawVideo.enabled = enabled;
   if (sentVideo) sentVideo.enabled = enabled;
-  setVideoIconButton(cameraButton, "C", enabled ? "Camera off" : "Camera on", !enabled);
+  setVideoIconButton(cameraButton, enabled ? "Camera off" : "Camera on", !enabled);
 }
 
-function setVideoIconButton(button, icon, label, active = false) {
+function setVideoIconButton(button, label, active = false) {
   if (!button) return;
-  button.dataset.icon = icon;
   button.setAttribute("aria-label", label);
   button.title = label;
   button.classList.toggle("is-active", active);
