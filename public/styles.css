@@ -2080,9 +2080,6 @@ input[type="file"] {
   margin-top: 0;
 }
 
-.board-side-controls #micButton,
-.board-side-controls #opponentMuteButton,
-.board-side-controls #cameraButton,
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
 .board-side-controls .takeback-request-button,
@@ -3141,9 +3138,49 @@ body[data-board-theme="wood"] {
 }
 
 .video-panel {
+  position: relative;
   background:
     linear-gradient(180deg, rgba(88, 212, 191, 0.08), transparent 34%),
     var(--panel);
+}
+
+.video-control-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 8;
+  display: flex;
+  gap: 6px;
+}
+
+.video-icon-button {
+  width: 34px;
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.62);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+}
+
+.video-icon-button::before {
+  content: attr(data-icon);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.video-icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.video-icon-button.is-active {
+  border-color: rgba(255, 170, 163, 0.7);
+  color: #260b08;
+  background: linear-gradient(135deg, #ffaaa3, var(--red));
 }
 
 .video-grid {
@@ -3304,9 +3341,6 @@ body[data-board-theme="wood"] {
   line-height: 1.1;
 }
 
-#micButton,
-#opponentMuteButton,
-#cameraButton,
 #offerDrawButton,
 #resignButton,
 #addOpponentButton {

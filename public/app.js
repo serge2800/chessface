@@ -63,6 +63,7 @@ const localVideoLabel = document.querySelector("#localVideoLabel");
 const remoteVideoLabel = document.querySelector("#remoteVideoLabel");
 const micButton = document.querySelector("#micButton");
 const opponentMuteButton = document.querySelector("#opponentMuteButton");
+const cameraButton = document.querySelector("#cameraButton");
 const gameChatForm = document.querySelector("#gameChatForm");
 const gameChatInput = document.querySelector("#gameChatInput");
 const gameChatMessages = document.querySelector("#gameChatMessages");
@@ -135,7 +136,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-camera-mirror-fix-v220";
+const APP_VERSION = "2026-07-10-camera-overlay-controls-v221";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -491,7 +492,7 @@ gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
 gameResultShareButton?.addEventListener("click", shareAccuracyResult);
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
-document.querySelector("#cameraButton").addEventListener("click", toggleCamera);
+cameraButton.addEventListener("click", toggleCamera);
 document.querySelector("#requestVideoButton").addEventListener("click", () => socket.emit("video:request"));
 document.querySelector("#acceptVideoButton").addEventListener("click", () => socket.emit("video:accept"));
 document.querySelector("#declineVideoButton").addEventListener("click", () => socket.emit("video:decline"));
@@ -1453,7 +1454,7 @@ function renderVideoControls(game) {
   const videoCanStayOpen = game.status === "playing" || game.status === "finished";
   opponentMuteButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   micButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
-  document.querySelector("#cameraButton").classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
+  cameraButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   document.querySelector("#requestVideoButton").classList.toggle("hidden", !game.videoOff || requestFromMe || requestFromOpponent || game.status !== "playing");
   const acceptVideoButton = document.querySelector("#acceptVideoButton");
   acceptVideoButton.classList.toggle("hidden", !requestFromOpponent);
@@ -3377,7 +3378,7 @@ function toggleMic() {
 function applyLocalAudioState() {
   const audio = localStream?.getAudioTracks()[0];
   if (audio) audio.enabled = !meAudioMuted;
-  micButton.textContent = meAudioMuted ? "Unmute me" : "Mute me";
+  setVideoIconButton(micButton, "M", meAudioMuted ? "Unmute me" : "Mute me", meAudioMuted);
 }
 
 async function toggleOpponentAudio() {
@@ -3408,7 +3409,7 @@ function applyOpponentAudioState() {
     if (!shouldMute) audio.play?.().catch(() => {});
   });
   const target = currentGame?.kind === "team" ? "others" : "opponent";
-  opponentMuteButton.textContent = opponentAudioMuted ? `Unmute ${target}` : `Mute ${target}`;
+  setVideoIconButton(opponentMuteButton, "O", opponentAudioMuted ? `Unmute ${target}` : `Mute ${target}`, opponentAudioMuted);
 }
 
 function toggleCamera() {
@@ -3419,7 +3420,15 @@ function toggleCamera() {
   const enabled = !video.enabled;
   if (rawVideo) rawVideo.enabled = enabled;
   if (sentVideo) sentVideo.enabled = enabled;
-  document.querySelector("#cameraButton").textContent = enabled ? "Camera off" : "Camera on";
+  setVideoIconButton(cameraButton, "C", enabled ? "Camera off" : "Camera on", !enabled);
+}
+
+function setVideoIconButton(button, icon, label, active = false) {
+  if (!button) return;
+  button.dataset.icon = icon;
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  button.classList.toggle("is-active", active);
 }
 
 function closePeer() {
