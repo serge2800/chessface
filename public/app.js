@@ -136,7 +136,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-camera-tile-icon-controls-v223";
+const APP_VERSION = "2026-07-10-random-sound-echo-guard-v225";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -221,6 +221,7 @@ let shownResultDialogKey = "";
 let soundSettings = loadSoundSettings();
 let playerSoundSettings = new Map();
 let lastPlayedSoundEventId = "";
+let randomSoundMicSuppressionActive = false;
 let accuracyAnalysisRunId = 0;
 let analyzingAccuracyGameId = "";
 
@@ -3377,8 +3378,20 @@ function toggleMic() {
 
 function applyLocalAudioState() {
   const audio = localStream?.getAudioTracks()[0];
-  if (audio) audio.enabled = !meAudioMuted;
+  if (audio) audio.enabled = !meAudioMuted && !randomSoundMicSuppressionActive;
   setVideoIconButton(micButton, meAudioMuted ? "Unmute me" : "Mute me", meAudioMuted);
+}
+
+function beginRandomSoundMicSuppression() {
+  if (meAudioMuted) return;
+  randomSoundMicSuppressionActive = true;
+  applyLocalAudioState();
+}
+
+function endRandomSoundMicSuppression() {
+  if (!randomSoundMicSuppressionActive) return;
+  randomSoundMicSuppressionActive = false;
+  applyLocalAudioState();
 }
 
 async function toggleOpponentAudio() {
@@ -3554,8 +3567,8 @@ async function loadSoundManifest() {
   }
 }
 
-function playConfiguredSound(soundId) {
-  window.ChessFaceSounds?.playSound?.(soundId);
+function playConfiguredSound(soundId, options = {}) {
+  window.ChessFaceSounds?.playSound?.(soundId, options);
 }
 
 function normalizeSoundSettings(nextSettings = {}) {
@@ -3721,7 +3734,11 @@ function playMoveResultSound(game, previousFen) {
   if (!soundEvent?.id || lastPlayedSoundEventId === soundEvent.id) return;
   if (soundEvent.type === "random") {
     lastPlayedSoundEventId = soundEvent.id;
-    playConfiguredSound(soundEvent.soundId || "random");
+    playConfiguredSound(soundEvent.soundId || "random", (
+      String(soundEvent.playerId) === String(me?.id)
+        ? { onStart: beginRandomSoundMicSuppression, onEnd: endRandomSoundMicSuppression }
+        : {}
+    ));
     return;
   }
   if (!previousFen || previousFen === game?.fen) return;
