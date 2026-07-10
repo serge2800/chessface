@@ -201,7 +201,7 @@ function renderAnalysisPage() {
 
 function openAnalysisWindow(game) {
   if (!game?.id) return;
-  window.open(`/analysis.html?game=${encodeURIComponent(game.id)}&analyze=1`, "_blank", "noopener");
+  location.href = `/analysis.html?game=${encodeURIComponent(game.id)}&analyze=1`;
 }
 
 function renderChart() {
@@ -483,6 +483,7 @@ function readyStockfishWorker(worker, label) {
       if (line === "readyok") {
         cleanup();
         worker.postMessage("setoption name Hash value 16");
+        worker.postMessage("setoption name MultiPV value 3");
         worker.postMessage("ucinewgame");
         resolve(worker);
       }
@@ -516,26 +517,49 @@ function analyzeFen(fen, moveTimeMs = 650) {
   return new Promise((resolve, reject) => {
     let bestMove = "";
     let score = { type: "cp", value: 0 };
+    const lines = new Map();
     const timeout = setTimeout(() => {
       stockfishWorker.removeEventListener("message", handleMessage);
       reject(new Error(`${stockfishEngineLabel || "Stockfish"} did not answer`));
     }, Math.max(10000, moveTimeMs + 9000));
     const handleMessage = (event) => {
       const line = String(event.data || "");
+      const multipvMatch = line.match(/\bmultipv\s+(\d+)/);
       const scoreMatch = line.match(/\bscore\s+(cp|mate)\s+(-?\d+)/);
-      if (scoreMatch) score = { type: scoreMatch[1], value: Number(scoreMatch[2]) };
+      const pvMatch = line.match(/\bpv\s+(.+)$/);
+      const multipv = multipvMatch ? Number(multipvMatch[1]) : 1;
+      if (scoreMatch) {
+        const nextScore = { type: scoreMatch[1], value: Number(scoreMatch[2]) };
+        if (multipv === 1) score = nextScore;
+        lines.set(multipv, {
+          rank: multipv,
+          score: nextScore,
+          moves: pvMatch ? pvMatch[1].split(/\s+/).slice(0, 8) : (lines.get(multipv)?.moves || [])
+        });
+      } else if (pvMatch) {
+        lines.set(multipv, {
+          rank: multipv,
+          score: lines.get(multipv)?.score || { type: "cp", value: 0 },
+          moves: pvMatch[1].split(/\s+/).slice(0, 8)
+        });
+      }
       const bestMoveMatch = line.match(/^bestmove\s+(\S+)/);
       if (bestMoveMatch) {
         bestMove = bestMoveMatch[1];
         clearTimeout(timeout);
         stockfishWorker.removeEventListener("message", handleMessage);
-        const result = { bestMove, score };
+        const result = {
+          bestMove,
+          score,
+          lines: [...lines.values()].sort((a, b) => a.rank - b.rank).slice(0, 3)
+        };
         positionAnalysisCache.set(cacheKey, result);
         resolve(result);
       }
     };
     stockfishWorker.addEventListener("message", handleMessage);
     stockfishWorker.postMessage("stop");
+    stockfishWorker.postMessage("setoption name MultiPV value 3");
     stockfishWorker.postMessage(`position fen ${fen}`);
     stockfishWorker.postMessage(`go movetime ${moveTimeMs}`);
   });
@@ -561,6 +585,7 @@ function classifyMove(move, before, after, beforeFen) {
     color: mover,
     playedMove,
     bestMove: before.bestMove,
+    lines: Array.isArray(before.lines) ? before.lines : [],
     centipawnLoss,
     label,
     beforeEval: bestBefore,
@@ -611,8 +636,31 @@ function renderAnalyzedMove(move) {
       <span>${move.index}. ${escapeHtml(move.san)}</span>
       <b>${move.label}</b>
       <small>Best: ${escapeHtml(move.bestMove || "-")} · loss ${move.centipawnLoss}</small>
+      ${renderMoveLines(move.lines)}
     </button>
   `;
+}
+
+function renderMoveLines(lines = []) {
+  if (!lines.length) return "";
+  return `
+    <em class="analysis-lines">
+      ${lines.map((line) => `
+        <span>
+          <strong>${line.rank}.</strong>
+          ${escapeHtml(formatEngineLine(line))}
+        </span>
+      `).join("")}
+    </em>
+  `;
+}
+
+function formatEngineLine(line) {
+  const score = line.score?.type === "mate"
+    ? `M${line.score.value}`
+    : `${line.score?.value > 0 ? "+" : ""}${((line.score?.value || 0) / 100).toFixed(2)}`;
+  const moves = Array.isArray(line.moves) && line.moves.length ? line.moves.join(" ") : "-";
+  return `${score}: ${moves}`;
 }
 
 function readPgnHeader(pgn, key) {

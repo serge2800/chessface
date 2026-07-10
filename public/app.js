@@ -144,7 +144,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-result-share-panel-v226";
+const APP_VERSION = "2026-07-10-analysis-in-site-v227";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1240,7 +1240,7 @@ function escapeHtml(value) {
 
 function openCurrentGameAnalysis() {
   if (!currentGame?.id) return;
-  window.open(`/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`, "_blank", "noopener");
+  location.href = `/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`;
 }
 
 async function shareAccuracyResult() {

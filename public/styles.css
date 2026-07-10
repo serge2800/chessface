@@ -4457,6 +4457,27 @@ body[data-board-theme="wood"] {
   font-size: 11px;
 }
 
+.analysis-lines {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+  color: #d8cab2;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.25;
+}
+
+.analysis-lines span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-lines strong {
+  color: var(--gold);
+}
+
 .analysis-move.best b,
 .analysis-move.excellent b {
   color: var(--green);
