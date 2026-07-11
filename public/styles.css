@@ -1734,7 +1734,7 @@ input[type="file"] {
 
 .board-animation-slot-top {
   top: 82px;
-  height: 205px;
+  height: 99px;
 }
 
 .board-animation-slot-middle {
@@ -1743,7 +1743,7 @@ input[type="file"] {
 
 .board-animation-slot-bottom {
   top: calc(100% - 270px);
-  height: 205px;
+  height: 99px;
 }
 
 .eval-donkey-video {
