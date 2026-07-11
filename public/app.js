@@ -144,7 +144,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-11-eval-videos-v228";
+const APP_VERSION = "2026-07-11-donkey-warmup-v230";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -180,6 +180,7 @@ const DONKEY_MOODS = [
   { id: "1-winning-happiest", src: "/assets/eval/1.mov", label: "Winning big", max: Infinity }
 ];
 const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
+const donkeyVideoPreloads = new Map();
 let selectedSquare;
 let pendingPremove = null;
 let playingPremove = false;
@@ -256,6 +257,8 @@ matchmakingSlides.forEach((slide) => {
   const image = new Image();
   image.src = slide.image;
 });
+
+scheduleDonkeyVideoWarmup();
 
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 
@@ -1803,17 +1806,87 @@ function donkeyMoodForColor(color, whiteCentipawns) {
   return DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || DONKEY_MOODS[5];
 }
 
-function setDonkeyMood(video, mood) {
-  if (!video || !mood || video.dataset.mood === mood.id) return;
-  video.dataset.mood = mood.id;
-  video.classList.add("is-changing");
-  window.setTimeout(() => {
+async function setDonkeyMood(video, mood) {
+  if (!video || !mood || video.dataset.mood === mood.id || video.dataset.pendingMood === mood.id) return;
+  const requestId = `${mood.id}:${Date.now()}:${Math.random()}`;
+  video.dataset.pendingMood = mood.id;
+  video.dataset.moodRequest = requestId;
+  try {
+    await preloadDonkeyVideo(mood.src);
+    if (video.dataset.moodRequest !== requestId) return;
+    video.dataset.mood = mood.id;
     video.src = mood.src;
     video.setAttribute("aria-label", mood.label + " position mood");
     video.load();
-    video.play().catch(() => {});
-    video.classList.remove("is-changing");
-  }, 90);
+    await video.play().catch(() => {});
+  } catch (_error) {
+    if (video.dataset.moodRequest === requestId && !video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) {
+      video.src = DONKEY_VIDEO_FALLBACK_SRC;
+      video.load();
+      video.play().catch(() => {});
+    }
+  } finally {
+    if (video.dataset.moodRequest === requestId) {
+      delete video.dataset.pendingMood;
+      delete video.dataset.moodRequest;
+    }
+  }
+}
+
+function preloadDonkeyVideo(src) {
+  if (donkeyVideoPreloads.has(src)) return donkeyVideoPreloads.get(src).promise;
+  const probe = document.createElement("video");
+  probe.muted = true;
+  probe.playsInline = true;
+  probe.preload = "auto";
+  const promise = new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Donkey video preload timed out"));
+    }, 3500);
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      probe.removeEventListener("loadeddata", handleReady);
+      probe.removeEventListener("canplay", handleReady);
+      probe.removeEventListener("error", handleError);
+    };
+    const handleReady = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error("Donkey video failed to preload"));
+    };
+    probe.addEventListener("loadeddata", handleReady, { once: true });
+    probe.addEventListener("canplay", handleReady, { once: true });
+    probe.addEventListener("error", handleError, { once: true });
+  });
+  donkeyVideoPreloads.set(src, { element: probe, promise });
+  probe.src = src;
+  probe.load();
+  return promise;
+}
+
+function scheduleDonkeyVideoWarmup() {
+  const orderedSources = [...new Set([
+    DONKEY_VIDEO_FALLBACK_SRC,
+    ...DONKEY_MOODS.slice().sort((a, b) => Math.abs(a.max) - Math.abs(b.max)).map((mood) => mood.src)
+  ])];
+  const run = () => warmDonkeyVideos(orderedSources);
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 2500 });
+  } else {
+    window.setTimeout(run, 1600);
+  }
+}
+
+function warmDonkeyVideos(sources, index = 0) {
+  const src = sources[index];
+  if (!src) return;
+  preloadDonkeyVideo(src).catch(() => {}).finally(() => {
+    window.setTimeout(() => warmDonkeyVideos(sources, index + 1), 550);
+  });
 }
 
 [topDonkeyMood, bottomDonkeyMood].forEach((video) => {
