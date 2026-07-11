@@ -144,7 +144,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-10-analysis-in-site-v227";
+const APP_VERSION = "2026-07-11-eval-videos-v228";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -174,10 +174,10 @@ const DONKEY_MOODS = [
   { id: "7-losing-worse", src: "/assets/eval/7.mov", label: "Worse", max: -150 },
   { id: "6-losing-slightly", src: "/assets/eval/6.mov", label: "Slightly worse", max: -30 },
   { id: "5-balanced", src: "/assets/eval/5.mov", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", src: "/assets/eval/5.mov", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", src: "/assets/eval/5.mov", label: "Good", max: 300 },
-  { id: "2-winning-very-good", src: "/assets/eval/5.mov", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", src: "/assets/eval/5.mov", label: "Winning big", max: Infinity }
+  { id: "4-winning-slightly", src: "/assets/eval/4.mov", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", src: "/assets/eval/3.mov", label: "Good", max: 300 },
+  { id: "2-winning-very-good", src: "/assets/eval/2.mov", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", src: "/assets/eval/1.mov", label: "Winning big", max: Infinity }
 ];
 const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
 let selectedSquare;
