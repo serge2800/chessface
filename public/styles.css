@@ -1749,10 +1749,15 @@ input[type="file"] {
   position: relative;
   display: grid;
   width: min(220px, 42vw);
+  z-index: 8;
 }
 
 .board-side-controls .turn-custom-sound {
   width: 100%;
+}
+
+.turn-custom-sound.menu-open {
+  z-index: 220;
 }
 
 .turn-random-sound {
@@ -1842,7 +1847,7 @@ input[type="file"] {
   position: absolute;
   left: 0;
   top: calc(100% + 6px);
-  z-index: 80;
+  z-index: 240;
   width: min(320px, 76vw);
   max-height: min(360px, 58vh);
   overflow: auto;

@@ -166,7 +166,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-custom-sound-split-v1";
+const APP_VERSION = "2026-07-13-custom-sound-menu-zfix-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -4630,6 +4630,7 @@ function toggleTurnCustomSoundMenu(forceOpen = null) {
   if (!turnCustomSoundMenu) return;
   const open = forceOpen ?? turnCustomSoundMenu.classList.contains("hidden");
   turnCustomSoundMenu.classList.toggle("hidden", !open);
+  turnCustomSoundControl?.classList.toggle("menu-open", open);
   turnCustomSoundMenuButton?.setAttribute("aria-expanded", String(open));
   if (open) renderTurnCustomSoundMenu();
 }
@@ -4637,6 +4638,7 @@ function toggleTurnCustomSoundMenu(forceOpen = null) {
 function closeTurnCustomSoundMenu() {
   if (!turnCustomSoundMenu) return;
   turnCustomSoundMenu.classList.add("hidden");
+  turnCustomSoundControl?.classList.remove("menu-open");
   turnCustomSoundMenuButton?.setAttribute("aria-expanded", "false");
 }
 
