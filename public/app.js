@@ -163,7 +163,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-custom-turn-sound-v1";
+const APP_VERSION = "2026-07-13-ninja-intro-sound-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -171,6 +171,7 @@ const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
 const THINKING_DELAY_MS = 20000;
 const MATCH_INTRO_MS = 2000;
+const MATCH_INTRO_SOUND_URL = "/assets/ninja-intro.m4a?v=2026-07-13";
 const TIME_TROUBLE_SECONDS = 10;
 const HEARTBEAT_COOLDOWN_MS = 850;
 const VIDEO_CONSTRAINTS = {
@@ -3938,6 +3939,18 @@ function playHeartbeatSound(intensity = 0.8) {
 
 function playMatchIntroSound() {
   if (!settings.moveSound) return;
+  try {
+    const audio = new Audio(MATCH_INTRO_SOUND_URL);
+    audio.volume = 0.72;
+    audio.preload = "auto";
+    audio.play().catch(() => playFallbackMatchIntroSound());
+    return;
+  } catch {
+    playFallbackMatchIntroSound();
+  }
+}
+
+function playFallbackMatchIntroSound() {
   const context = getAudioContext();
   if (context.state === "suspended") context.resume();
   const now = context.currentTime;
