@@ -45,8 +45,9 @@ const bottomDonkeyMood = document.querySelector("#bottomDonkeyMood");
 const boardWrap = document.querySelector(".board-wrap");
 const boardMeta = document.querySelector("#boardMeta");
 const turnAlarmButton = document.querySelector("#turnAlarmButton");
-const turnCustomSoundControl = document.querySelector("#turnCustomSoundControl");
 const turnRandomSoundButton = document.querySelector("#turnRandomSoundButton");
+const turnCustomSoundControl = document.querySelector("#turnCustomSoundControl");
+const turnCustomSoundButton = document.querySelector("#turnCustomSoundButton");
 const turnCustomSoundSetting = document.querySelector("#turnCustomSoundSetting");
 const turnCustomSoundLabel = document.querySelector("#turnCustomSoundLabel");
 const faceMeshButton = document.querySelector("#faceMeshButton");
@@ -163,7 +164,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-ninja-intro-sound-v1";
+const APP_VERSION = "2026-07-13-random-custom-sounds-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -524,6 +525,10 @@ document.querySelector("#resignButton").addEventListener("click", () => {
   socket.emit("game:resign");
 });
 turnRandomSoundButton?.addEventListener("click", () => {
+  if (!currentGame?.canUseRandomSound) return;
+  socket.emit("sound:random-turn", { soundId: "random" });
+});
+turnCustomSoundButton?.addEventListener("click", () => {
   if (!currentGame?.canUseRandomSound) return;
   socket.emit("sound:random-turn", { soundId: soundSettings.turnSound || "random" });
 });
@@ -1644,21 +1649,24 @@ function endPostGameAndCall() {
 }
 
 function updateTurnRandomSoundButton(game, myTurn) {
-  if (!turnRandomSoundButton) return;
+  if (!turnRandomSoundButton && !turnCustomSoundButton) return;
   const visible = game.status === "playing";
   const locked = Boolean(game.randomSoundLocked);
   const usable = Boolean(myTurn && game.canUseRandomSound);
+  turnRandomSoundButton?.classList.toggle("hidden", !visible);
   turnCustomSoundControl?.classList.toggle("hidden", !visible);
-  turnRandomSoundButton.classList.toggle("hidden", !visible && !turnCustomSoundControl);
-  turnRandomSoundButton.disabled = !usable;
+  if (turnRandomSoundButton) turnRandomSoundButton.disabled = !usable;
+  if (turnCustomSoundButton) turnCustomSoundButton.disabled = !usable;
   if (turnCustomSoundSetting) turnCustomSoundSetting.disabled = !visible;
-  turnRandomSoundButton.title = locked
+  const title = locked
     ? "Wait for the current sound to finish."
     : !myTurn
       ? "You can use this on your turn."
       : usable
         ? ""
-        : "You already used your custom sound this turn.";
+        : "You already used a sound this turn.";
+  if (turnRandomSoundButton) turnRandomSoundButton.title = title || "Play a random sound.";
+  if (turnCustomSoundButton) turnCustomSoundButton.title = title || "Play your selected custom sound.";
 }
 
 function updateTurnStatusButton(game, myTurn) {

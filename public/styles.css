@@ -1758,6 +1758,30 @@ input[type="file"] {
 .turn-random-sound {
   min-height: 54px;
   width: min(220px, 42vw);
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  line-height: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+}
+
+.turn-random-sound img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1024 / 368;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+.turn-custom-sound-button {
+  min-height: 54px;
+  width: min(220px, 42vw);
   display: grid;
   gap: 2px;
   align-content: center;
@@ -1775,11 +1799,11 @@ input[type="file"] {
   letter-spacing: 0;
 }
 
-.turn-random-sound span {
+.turn-custom-sound-button span {
   font-size: 13px;
 }
 
-.turn-random-sound strong {
+.turn-custom-sound-button strong {
   max-width: 100%;
   overflow: hidden;
   color: rgba(17, 26, 23, 0.78);
@@ -1806,6 +1830,10 @@ input[type="file"] {
   min-height: 0;
 }
 
+.board-side-controls .turn-custom-sound-button {
+  width: 100%;
+}
+
 .board-side-controls .face-mesh-button {
   min-height: 42px;
   color: var(--teal);
@@ -1820,12 +1848,14 @@ input[type="file"] {
   background: linear-gradient(135deg, #9df9e7, var(--teal));
 }
 
-.turn-random-sound:hover:not(:disabled) {
+.turn-random-sound:hover:not(:disabled),
+.turn-custom-sound-button:hover:not(:disabled) {
   transform: none;
   filter: brightness(1.08);
 }
 
-.turn-random-sound:active:not(:disabled) {
+.turn-random-sound:active:not(:disabled),
+.turn-custom-sound-button:active:not(:disabled) {
   transform: none;
 }
 
@@ -1834,7 +1864,8 @@ input[type="file"] {
   transform: translateX(-15px);
 }
 
-.turn-random-sound:disabled {
+.turn-random-sound:disabled,
+.turn-custom-sound-button:disabled {
   cursor: not-allowed;
   opacity: 0.42;
   filter: grayscale(0.4);
@@ -2255,6 +2286,7 @@ input[type="file"] {
 
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
+.board-side-controls .turn-custom-sound,
 .board-side-controls .face-mesh-button,
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,
@@ -3720,6 +3752,7 @@ body[data-board-theme="wood"] {
 .board-side-controls .media-actions,
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
+.board-side-controls .turn-custom-sound,
 .board-side-controls .face-mesh-button,
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,

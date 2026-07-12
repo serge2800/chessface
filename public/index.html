@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-13-ninja-intro-sound-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-random-custom-sounds-v1" />
   </head>
   <body>
     <main class="shell">
@@ -267,8 +267,11 @@
                   <button id="analyzeFinishedGameButton" class="hidden">Analyze game</button>
                   <button id="newGameButton" class="hidden">New game</button>
                 </div>
+                <button type="button" class="turn-random-sound hidden" id="turnRandomSoundButton" aria-label="One push per move: random sound">
+                  <img src="assets/random_sound.png" alt="Random sound" />
+                </button>
                 <div class="turn-custom-sound hidden" id="turnCustomSoundControl">
-                  <button type="button" class="turn-random-sound" id="turnRandomSoundButton" aria-label="One push per move: play selected custom sound">
+                  <button type="button" class="turn-custom-sound-button" id="turnCustomSoundButton" aria-label="One push per move: play selected custom sound">
                     <span>Custom sound</span>
                     <strong id="turnCustomSoundLabel">Random</strong>
                   </button>
@@ -513,6 +516,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-13-ninja-intro-sound-v1"></script>
+    <script src="app.js?v=2026-07-13-random-custom-sounds-v1"></script>
   </body>
 </html>
