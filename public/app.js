@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-responsive-donkeys-v1";
+const APP_VERSION = "2026-07-12-fast-eval-bar-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1084,7 +1084,7 @@ function renderGame(game) {
   renderTeamRoster(game);
   updateOpponentProfileActions(game);
   if (boardNeedsRender) renderBoard(game.fen, game.color);
-  if (!previousFen || previousFen !== game.fen) requestLiveEvaluation(game.fen);
+  if (game.status === "playing" && (!previousFen || previousFen !== game.fen)) requestLiveEvaluation(game.fen);
   renderVideoControls(game);
   if (liveKitRoom && game.status === "playing" && !game.videoOff) scheduleLiveKitSync(liveKitRoom);
   if (!requiresLiveKitVideo(game)) syncPeerNegotiations();
@@ -1873,11 +1873,19 @@ function ensureLiveStockfish() {
 function requestLiveEvaluation(fen) {
   if (!evalBarFill || !fen) return;
   clearTimeout(liveEvalTimer);
-  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 650);
+  stopLiveEvaluation();
+  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 120);
+}
+
+function stopLiveEvaluation() {
+  liveEvalSearchId += 1;
+  liveEvalCleanup?.();
+  liveEvalCleanup = null;
+  liveEvalWorker?.postMessage?.("stop");
 }
 
 async function analyzeLiveFen(fen) {
-  const searchId = ++liveEvalSearchId;
+  const searchId = liveEvalSearchId;
   try {
     const engine = await ensureLiveStockfish();
     if (searchId !== liveEvalSearchId) return;
