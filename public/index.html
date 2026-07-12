@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-page-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-face-mesh-v1" />
   </head>
   <body>
     <main class="shell">
@@ -260,6 +260,7 @@
                 <button type="button" class="turn-random-sound hidden" id="turnRandomSoundButton" aria-label="One push per move: random sound">
                   <img src="assets/random_sound.png" alt="Random sound" />
                 </button>
+                <button type="button" class="face-mesh-button hidden" id="faceMeshButton" aria-pressed="false">Face mesh</button>
                 <button type="button" class="takeback-request-button hidden" id="takebackRequestButton">Takeback request</button>
                 <button type="button" class="turn-status-button hidden" id="turnStatusButton" disabled>Your Turn</button>
                 <button type="button" class="accept-beg-takeback-button hidden" id="acceptBegTakebackButton" disabled>Accept request</button>
@@ -494,6 +495,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-12-watch-page-v1"></script>
+    <script src="app.js?v=2026-07-12-face-mesh-v1"></script>
   </body>
 </html>

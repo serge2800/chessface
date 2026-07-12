@@ -1629,6 +1629,7 @@ input[type="file"] {
 .board-player,
 .board-side-controls .media-actions button,
 .board-side-actions button,
+.board-side-controls .face-mesh-button,
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,
 .board-side-controls .accept-beg-takeback-button {
@@ -1690,6 +1691,20 @@ input[type="file"] {
 .board-side-controls .turn-random-sound {
   width: 100%;
   min-height: 0;
+}
+
+.board-side-controls .face-mesh-button {
+  min-height: 42px;
+  color: var(--teal);
+  border-color: rgba(88, 212, 191, 0.38);
+  background: rgba(88, 212, 191, 0.08);
+  font-weight: 950;
+}
+
+.board-side-controls .face-mesh-button.is-active {
+  color: #111a17;
+  border-color: rgba(174, 255, 236, 0.8);
+  background: linear-gradient(135deg, #9df9e7, var(--teal));
 }
 
 .turn-random-sound:hover:not(:disabled) {
@@ -2083,6 +2098,7 @@ input[type="file"] {
 
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
+.board-side-controls .face-mesh-button,
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,
 .board-side-controls .accept-beg-takeback-button {
@@ -3504,6 +3520,7 @@ body[data-board-theme="wood"] {
 .board-side-controls .media-actions,
 .board-side-controls .board-side-actions,
 .board-side-controls .turn-random-sound,
+.board-side-controls .face-mesh-button,
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,
 .board-side-controls .accept-beg-takeback-button {
@@ -3512,7 +3529,8 @@ body[data-board-theme="wood"] {
 }
 
 .board-side-controls .media-actions button,
-.board-side-actions button {
+.board-side-actions button,
+.board-side-controls .face-mesh-button {
   width: 100%;
   min-height: 36px;
   padding: 6px 8px;

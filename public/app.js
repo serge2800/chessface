@@ -41,6 +41,7 @@ const boardWrap = document.querySelector(".board-wrap");
 const boardMeta = document.querySelector("#boardMeta");
 const turnAlarmButton = document.querySelector("#turnAlarmButton");
 const turnRandomSoundButton = document.querySelector("#turnRandomSoundButton");
+const faceMeshButton = document.querySelector("#faceMeshButton");
 const takebackRequestButton = document.querySelector("#takebackRequestButton");
 const turnStatusButton = document.querySelector("#turnStatusButton");
 const acceptBegTakebackButton = document.querySelector("#acceptBegTakebackButton");
@@ -149,8 +150,10 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-history-key-sounds-v1";
+const APP_VERSION = "2026-07-12-face-mesh-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
+const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
+const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
   height: { ideal: VIDEO_OUTPUT_HEIGHT, max: 360 },
@@ -226,6 +229,11 @@ let liveKitTrackElements = new Map();
 let liveKitReconnectTimer;
 let liveKitReconnectAttempts = 0;
 let liveKitPublishRepairTimer;
+let faceMeshEnabled = false;
+let faceMeshModulePromise;
+let faceMeshInstance = null;
+let faceMeshRenderer = null;
+let faceMeshFrameInFlight = false;
 let liveKitState = {
   mode: "not started",
   room: "",
@@ -526,6 +534,7 @@ declineRematchButton?.addEventListener("click", goToDashboardFromPostGame);
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 cameraButton.addEventListener("click", toggleCamera);
+faceMeshButton?.addEventListener("click", toggleFaceMesh);
 document.querySelector("#requestVideoButton").addEventListener("click", () => socket.emit("video:request"));
 document.querySelector("#acceptVideoButton").addEventListener("click", () => socket.emit("video:accept"));
 document.querySelector("#declineVideoButton").addEventListener("click", () => socket.emit("video:decline"));
@@ -1741,6 +1750,7 @@ function renderVideoControls(game) {
   opponentMuteButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   micButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
   cameraButton.classList.toggle("hidden", game.videoOff || !videoCanStayOpen);
+  updateFaceMeshButton();
   document.querySelector("#requestVideoButton").classList.toggle("hidden", !game.videoOff || requestFromMe || requestFromOpponent || game.status !== "playing");
   const acceptVideoButton = document.querySelector("#acceptVideoButton");
   acceptVideoButton.classList.toggle("hidden", !requestFromOpponent);
@@ -3654,7 +3664,121 @@ function sendSignal(peerId, signal) {
 async function buildOutgoingMediaStream(sourceStream) {
   stopFilterRenderer();
   stopFilteredStream();
-  return sourceStream;
+  if (!faceMeshEnabled) return sourceStream;
+  try {
+    return await buildFaceMeshStream(sourceStream);
+  } catch (error) {
+    console.warn("[ChessFace] Face mesh unavailable:", error);
+    faceMeshEnabled = false;
+    updateFaceMeshButton();
+    showNotice("Face mesh could not start. Camera stayed normal.");
+    return sourceStream;
+  }
+}
+
+async function loadFaceMeshModule() {
+  if (window.FaceMesh && window.drawConnectors) return { FaceMesh: window.FaceMesh };
+  if (faceMeshModulePromise) return faceMeshModulePromise;
+  faceMeshModulePromise = loadScript(MEDIAPIPE_DRAWING_UTILS_URL)
+    .then(() => loadScript(MEDIAPIPE_FACE_MESH_URL))
+    .then(() => {
+      if (!window.FaceMesh) throw new Error("MediaPipe FaceMesh did not load");
+      return { FaceMesh: window.FaceMesh };
+    });
+  return faceMeshModulePromise;
+}
+
+function loadScript(src) {
+  const existing = document.querySelector(`script[src="${src}"]`);
+  if (existing) {
+    return existing.dataset.loaded === "true"
+      ? Promise.resolve()
+      : new Promise((resolve, reject) => {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", reject, { once: true });
+      });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => reject(new Error(`Could not load ${src}`)), { once: true });
+    document.head.append(script);
+  });
+}
+
+async function buildFaceMeshStream(sourceStream) {
+  const sourceVideoTrack = sourceStream.getVideoTracks()[0];
+  if (!sourceVideoTrack) return sourceStream;
+  const { FaceMesh } = await loadFaceMeshModule();
+  const sourceVideo = document.createElement("video");
+  sourceVideo.muted = true;
+  sourceVideo.playsInline = true;
+  sourceVideo.srcObject = new MediaStream([sourceVideoTrack]);
+  await sourceVideo.play().catch(() => {});
+  await waitForVideoReady(sourceVideo);
+
+  const settings = sourceVideoTrack.getSettings?.() || {};
+  const width = settings.width || sourceVideo.videoWidth || VIDEO_OUTPUT_WIDTH;
+  const height = settings.height || sourceVideo.videoHeight || VIDEO_OUTPUT_HEIGHT;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: false });
+  const outputStream = canvas.captureStream(VIDEO_FRAME_RATE);
+  sourceStream.getAudioTracks().forEach((track) => outputStream.addTrack(track));
+  filteredLocalStream = outputStream;
+
+  const mesh = new FaceMesh({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+  });
+  mesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  faceMeshInstance = mesh;
+  let latestResults = null;
+  mesh.onResults((results) => {
+    latestResults = results;
+  });
+
+  let stopped = false;
+  const render = async () => {
+    if (stopped || !faceMeshEnabled || !rawLocalStream) return;
+    context.drawImage(sourceVideo, 0, 0, width, height);
+    const landmarks = latestResults?.multiFaceLandmarks?.[0];
+    if (landmarks && window.drawConnectors) {
+      const connectors = window.FACEMESH_TESSELATION || [];
+      const contours = window.FACEMESH_CONTOURS || [];
+      window.drawConnectors(context, landmarks, connectors, { color: "rgba(88, 212, 191, 0.32)", lineWidth: 1 });
+      window.drawConnectors(context, landmarks, contours, { color: "rgba(242, 198, 109, 0.9)", lineWidth: 2 });
+    }
+    if (!faceMeshFrameInFlight && sourceVideo.readyState >= 2) {
+      faceMeshFrameInFlight = true;
+      mesh.send({ image: sourceVideo }).catch(() => {}).finally(() => {
+        faceMeshFrameInFlight = false;
+      });
+    }
+    faceMeshRenderer.frame = requestAnimationFrame(render);
+  };
+  faceMeshRenderer = {
+    frame: 0,
+    stop: () => {
+      stopped = true;
+      cancelAnimationFrame(faceMeshRenderer?.frame);
+      sourceVideo.pause?.();
+      sourceVideo.srcObject = null;
+    }
+  };
+  render();
+  return outputStream;
 }
 
 async function restartMediaPipeline() {
@@ -3679,6 +3803,39 @@ async function restartMediaPipeline() {
   applyLocalAudioState();
   setLiveKitState({ localVideoPublished: Boolean(nextVideoTrack) });
   showNotice("Camera updated.");
+}
+
+async function toggleFaceMesh() {
+  if (!currentGame || currentGame.videoOff || currentGame.status !== "playing") return;
+  if (!rawLocalStream?.getVideoTracks().length) {
+    showNotice("Turn on your camera before using Face mesh.");
+    return;
+  }
+  faceMeshEnabled = !faceMeshEnabled;
+  updateFaceMeshButton(true);
+  try {
+    await restartMediaPipeline();
+    showNotice(faceMeshEnabled ? "Face mesh is on." : "Face mesh is off.");
+  } catch (error) {
+    console.warn("[ChessFace] Face mesh toggle failed:", error);
+    faceMeshEnabled = false;
+    stopFilterRenderer();
+    stopFilteredStream();
+    updateFaceMeshButton();
+    showNotice("Face mesh could not start.");
+  } finally {
+    updateFaceMeshButton();
+  }
+}
+
+function updateFaceMeshButton(loading = false) {
+  if (!faceMeshButton) return;
+  const visible = Boolean(currentGame && !currentGame.videoOff && currentGame.status === "playing");
+  faceMeshButton.classList.toggle("hidden", !visible);
+  faceMeshButton.classList.toggle("is-active", faceMeshEnabled);
+  faceMeshButton.disabled = loading || !visible;
+  faceMeshButton.textContent = loading ? "Loading mesh..." : faceMeshEnabled ? "Normal face" : "Face mesh";
+  faceMeshButton.setAttribute("aria-pressed", String(faceMeshEnabled));
 }
 
 async function replaceOutgoingVideoTrack(videoTrack) {
@@ -3735,9 +3892,16 @@ function stopFilteredStream() {
 }
 
 function stopFilterRenderer() {
+  faceMeshRenderer?.stop?.();
+  faceMeshRenderer = null;
+  faceMeshInstance?.close?.();
+  faceMeshInstance = null;
+  faceMeshFrameInFlight = false;
 }
 
 function stopLocalMedia() {
+  faceMeshEnabled = false;
+  updateFaceMeshButton();
   stopFilterRenderer();
   stopFilteredStream();
   if (rawLocalStream) {
