@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-donkey-mood-images-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-donkey-video-optimized-v1" />
   </head>
   <body>
     <main class="shell">
@@ -266,11 +266,11 @@
                 <button type="button" class="accept-beg-takeback-button hidden" id="acceptBegTakebackButton" disabled>Accept request</button>
                 <div class="board-animation-slots" aria-label="Evaluation animation slots">
                   <div class="board-animation-slot board-animation-slot-top">
-                    <img id="topDonkeyMood" class="eval-donkey-mood" src="/assets/donkeys/06-balanced.png" alt="Balanced position mood" decoding="async" aria-label="Top player evaluation mood" />
+                    <video id="topDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Top player evaluation mood"></video>
                   </div>
                   <div class="board-animation-slot board-animation-slot-middle" aria-hidden="true"></div>
                   <div class="board-animation-slot board-animation-slot-bottom">
-                    <img id="bottomDonkeyMood" class="eval-donkey-mood" src="/assets/donkeys/06-balanced.png" alt="Balanced position mood" decoding="async" aria-label="Bottom player evaluation mood" />
+                    <video id="bottomDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Bottom player evaluation mood"></video>
                   </div>
                 </div>
               </div>
@@ -499,6 +499,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-12-donkey-mood-images-v1"></script>
+    <script src="app.js?v=2026-07-12-donkey-video-optimized-v1"></script>
   </body>
 </html>

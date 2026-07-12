@@ -152,7 +152,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-donkey-mood-images-v1";
+const APP_VERSION = "2026-07-12-donkey-video-optimized-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -194,19 +194,21 @@ const LIVE_STOCKFISH_SOURCES = [
   }
 ];
 const DONKEY_MOODS = [
-  { id: "10-losing-crushed", src: "/assets/donkeys/01-about-to-get-mated.png", label: "Losing badly", max: -800 },
-  { id: "9-losing-horrible", src: "/assets/donkeys/02-terrified.png", label: "Very bad", max: -500 },
-  { id: "8-losing-danger", src: "/assets/donkeys/03-panicking.png", label: "In danger", max: -300 },
-  { id: "7-losing-worse", src: "/assets/donkeys/04-worried.png", label: "Worse", max: -150 },
-  { id: "6-losing-slightly", src: "/assets/donkeys/05-slightly-bad.png", label: "Slightly worse", max: -30 },
-  { id: "5-balanced", src: "/assets/donkeys/06-balanced.png", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", src: "/assets/donkeys/07-slightly-good.png", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", src: "/assets/donkeys/08-happy.png", label: "Good", max: 300 },
-  { id: "2-winning-very-good", src: "/assets/donkeys/09-very-good.png", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", src: "/assets/donkeys/10-about-to-mate.png", label: "Winning big", max: Infinity }
+  { id: "10-losing-crushed", webm: "/assets/eval-optimized/10.webm", mp4: "/assets/eval-optimized/10.mp4", label: "Losing badly", max: -800 },
+  { id: "9-losing-horrible", webm: "/assets/eval-optimized/9.webm", mp4: "/assets/eval-optimized/9.mp4", label: "Very bad", max: -500 },
+  { id: "8-losing-danger", webm: "/assets/eval-optimized/8.webm", mp4: "/assets/eval-optimized/8.mp4", label: "In danger", max: -300 },
+  { id: "7-losing-worse", webm: "/assets/eval-optimized/7.webm", mp4: "/assets/eval-optimized/7.mp4", label: "Worse", max: -150 },
+  { id: "6-losing-slightly", webm: "/assets/eval-optimized/6.webm", mp4: "/assets/eval-optimized/6.mp4", label: "Slightly worse", max: -30 },
+  { id: "5-balanced", webm: "/assets/eval-optimized/5.webm", mp4: "/assets/eval-optimized/5.mp4", label: "Balanced", max: 30 },
+  { id: "4-winning-slightly", webm: "/assets/eval-optimized/4.webm", mp4: "/assets/eval-optimized/4.mp4", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", webm: "/assets/eval-optimized/3.webm", mp4: "/assets/eval-optimized/3.mp4", label: "Good", max: 300 },
+  { id: "2-winning-very-good", webm: "/assets/eval-optimized/2.webm", mp4: "/assets/eval-optimized/2.mp4", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", webm: "/assets/eval-optimized/1.webm", mp4: "/assets/eval-optimized/1.mp4", label: "Winning big", max: Infinity }
 ];
-const DONKEY_IMAGE_FALLBACK_SRC = "/assets/donkeys/06-balanced.png";
-const DONKEY_IMAGE_SOURCES = DONKEY_MOODS.map((mood) => mood.src);
+const DONKEY_VIDEO_FALLBACK_MOOD = DONKEY_MOODS[5];
+const donkeyVideoPreloads = new Map();
+let donkeyVideoFormat = null;
+let donkeyVideoWarmupStarted = false;
 let matchmakingSlidesPreloaded = false;
 let selectedSquare;
 let pendingPremove = null;
@@ -874,10 +876,12 @@ async function enterGame(game) {
   friendChallengePanel.classList.add("hidden");
   challengeBox.classList.add("hidden");
   gameLayout.classList.remove("hidden");
+  scheduleDonkeyVideoWarmup();
   seekButton.disabled = false;
   seekTeamButton.disabled = false;
   cancelSeekButton.classList.add("hidden");
   renderGame(game);
+  updateDonkeyMoods(0);
   scrollGameIntoViewOnStart();
   sendSoundSettings();
   await startMediaAndPeer();
@@ -2053,22 +2057,24 @@ function donkeyMoodForColor(color, whiteCentipawns) {
   return DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || DONKEY_MOODS[5];
 }
 
-function setDonkeyMood(image, mood) {
-  if (!image || !mood || image.dataset.mood === mood.id) return;
-  image.dataset.mood = mood.id;
-  image.classList.add("is-changing");
-  image.src = mood.src;
-  image.alt = mood.label + " position mood";
-  image.setAttribute("aria-label", mood.label + " position mood");
-  window.setTimeout(() => image.classList.remove("is-changing"), 120);
+function setDonkeyMood(video, mood) {
+  if (!video || !mood || video.dataset.mood === mood.id) return;
+  const source = donkeyVideoSource(mood);
+  video.dataset.mood = mood.id;
+  video.classList.add("is-changing");
+  video.setAttribute("aria-label", mood.label + " position mood");
+  if (!video.currentSrc.endsWith(source) && !video.src.endsWith(source)) {
+    video.src = source;
+    video.load();
+  }
+  video.play?.().catch(() => {});
+  window.setTimeout(() => video.classList.remove("is-changing"), 160);
 }
 
 function scheduleDonkeyVideoWarmup() {
-  const run = () => DONKEY_IMAGE_SOURCES.forEach((src) => {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = src;
-  });
+  if (donkeyVideoWarmupStarted) return;
+  donkeyVideoWarmupStarted = true;
+  const run = () => DONKEY_MOODS.map(donkeyVideoSource).forEach(preloadDonkeyVideo);
   if ("requestIdleCallback" in window) {
     window.setTimeout(() => window.requestIdleCallback(run, { timeout: 2500 }), 400);
   } else {
@@ -2076,12 +2082,35 @@ function scheduleDonkeyVideoWarmup() {
   }
 }
 
-[topDonkeyMood, bottomDonkeyMood].forEach((image) => {
-  image?.addEventListener("error", () => {
-    if (image.src.endsWith(DONKEY_IMAGE_FALLBACK_SRC)) return;
-    image.src = DONKEY_IMAGE_FALLBACK_SRC;
+[topDonkeyMood, bottomDonkeyMood].forEach((video) => {
+  video?.addEventListener("error", () => {
+    const fallback = donkeyVideoSource(DONKEY_VIDEO_FALLBACK_MOOD);
+    if (video.src.endsWith(fallback)) return;
+    video.src = fallback;
+    video.load();
+    video.play?.().catch(() => {});
   });
 });
+
+function donkeyVideoSource(mood) {
+  if (!donkeyVideoFormat) {
+    const probe = document.createElement("video");
+    donkeyVideoFormat = probe.canPlayType('video/webm; codecs="vp9"') ? "webm" : "mp4";
+  }
+  return mood?.[donkeyVideoFormat] || mood?.mp4 || DONKEY_VIDEO_FALLBACK_MOOD.mp4;
+}
+
+function preloadDonkeyVideo(src) {
+  if (!src || donkeyVideoPreloads.has(src)) return;
+  const video = document.createElement("video");
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = src;
+  video.load();
+  donkeyVideoPreloads.set(src, video);
+}
 
 function scoreToWhiteCentipawns(score, fen) {
   const sideToMove = String(fen || "").split(" ")[1] || "w";
@@ -4383,5 +4412,4 @@ syncSoundControls();
 applySettings();
 document.addEventListener("keydown", handleBoardHistoryKeydown);
 boot();
-scheduleDonkeyVideoWarmup();
 setAuthMode(mode);
