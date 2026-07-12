@@ -950,7 +950,8 @@ function videoPeerPayload(game, viewerId, player) {
 
 function emitGame(game) {
   for (const player of gamePlayers(game)) {
-    io.to(player.socketId).emit("game:update", gamePayload(game, player.id));
+    const liveSocket = socketForUser(player.id);
+    io.to(liveSocket?.id || player.socketId).emit("game:update", gamePayload(game, player.id));
   }
 }
 
@@ -1816,7 +1817,9 @@ io.on("connection", (socket) => {
       if (alreadyRequested) return;
       for (const player of gamePlayers(game)) {
         if (player.id === socket.user.id || game.rematchRequests.has(player.id)) continue;
-        io.to(player.socketId).emit("rematch:requested", {
+        const liveSocket = socketForUser(player.id);
+        if (!liveSocket) continue;
+        liveSocket.emit("rematch:requested", {
           gameId: game.id,
           from: { id: socket.user.id, username: socket.user.username },
           timeControl: game.timeControl
