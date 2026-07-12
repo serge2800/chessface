@@ -157,7 +157,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-match-intro-fight-v1";
+const APP_VERSION = "2026-07-13-time-trouble-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -165,6 +165,8 @@ const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
 const THINKING_DELAY_MS = 20000;
 const MATCH_INTRO_MS = 2000;
+const TIME_TROUBLE_SECONDS = 10;
+const HEARTBEAT_COOLDOWN_MS = 850;
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
   height: { ideal: VIDEO_OUTPUT_HEIGHT, max: 360 },
@@ -196,6 +198,8 @@ let lastFaceZoomEval = null;
 let lastFaceZoomMoveKey = "";
 let thinkingTurnKey = "";
 let thinkingTurnStartedAt = 0;
+let lastHeartbeatAt = 0;
+let lastHeartbeatKey = "";
 const LIVE_STOCKFISH_SOURCES = [
   {
     label: "Local Stockfish 18 lite",
@@ -1219,6 +1223,7 @@ function renderGame(game) {
   gameStatus.textContent = statusText(game);
   playerColor.textContent = playerTurnText(game);
   renderBoardPlayers(game);
+  updateTimeTrouble(game);
   renderTeamRoster(game);
   updateOpponentProfileActions(game);
   if (boardNeedsRender) renderBoard(nextDisplayedFen, game.color);
@@ -2376,6 +2381,36 @@ function renderPlayerSlot(position, color, player, clock, isOpponent) {
     clockNode.id = `${color}Clock`;
     clockNode.textContent = formatClock(clock);
   }
+}
+
+function updateTimeTrouble(game) {
+  const turnColor = game?.turn;
+  const seconds = Number(game?.clocks?.[turnColor] ?? Infinity);
+  const active = Boolean(game?.status === "playing" && turnColor && seconds > 0 && seconds <= TIME_TROUBLE_SECONDS);
+  boardWrap?.classList.toggle("time-trouble", active);
+  board?.classList.toggle("time-trouble", active);
+  document.querySelectorAll(".board-player b").forEach((clock) => clock.classList.remove("time-trouble-clock"));
+  if (!active) return;
+  document.querySelector(`#${turnColor}Clock`)?.classList.add("time-trouble-clock");
+  playHeartbeatForTimeTrouble(game, turnColor, seconds);
+}
+
+function clearTimeTrouble() {
+  boardWrap?.classList.remove("time-trouble");
+  board?.classList.remove("time-trouble");
+  document.querySelectorAll(".board-player b").forEach((clock) => clock.classList.remove("time-trouble-clock"));
+  lastHeartbeatKey = "";
+  lastHeartbeatAt = 0;
+}
+
+function playHeartbeatForTimeTrouble(game, color, seconds) {
+  if (!settings.moveSound) return;
+  const nowMs = Date.now();
+  const beatKey = `${game.id}:${color}:${seconds}`;
+  if (beatKey === lastHeartbeatKey || nowMs - lastHeartbeatAt < HEARTBEAT_COOLDOWN_MS) return;
+  lastHeartbeatKey = beatKey;
+  lastHeartbeatAt = nowMs;
+  playHeartbeatSound(Math.max(0.45, Math.min(1, seconds / TIME_TROUBLE_SECONDS)));
 }
 
 function renderBoard(fen, color) {
@@ -3859,6 +3894,32 @@ function playIllegalMoveSound() {
   wobble.stop(now + 0.19);
 }
 
+function playHeartbeatSound(intensity = 0.8) {
+  const context = getAudioContext();
+  if (context.state === "suspended") context.resume();
+  const now = context.currentTime;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.28 + intensity * 0.18, now + 0.012);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
+  master.connect(context.destination);
+
+  [0, 0.18].forEach((offset, index) => {
+    const beat = context.createOscillator();
+    beat.type = "sine";
+    const beatGain = context.createGain();
+    const start = now + offset;
+    beat.frequency.setValueAtTime(index === 0 ? 72 : 58, start);
+    beat.frequency.exponentialRampToValueAtTime(index === 0 ? 46 : 38, start + 0.09);
+    beatGain.gain.setValueAtTime(0.0001, start);
+    beatGain.gain.exponentialRampToValueAtTime(index === 0 ? 1 : 0.72, start + 0.01);
+    beatGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.12);
+    beat.connect(beatGain).connect(master);
+    beat.start(start);
+    beat.stop(start + 0.13);
+  });
+}
+
 function sendSignal(peerId, signal) {
   if (!currentGame || !peerId) return;
   socket.emit("webrtc:signal", { gameId: currentGame.id, to: peerId, signal });
@@ -4259,6 +4320,7 @@ function resetToLobby() {
   pendingRematchGameId = null;
   renderGameChat();
   selectedSquare = null;
+  clearTimeTrouble();
   hideMatchIntro();
   gameLayout.classList.add("hidden");
   lobby.classList.remove("hidden");
@@ -4279,6 +4341,7 @@ function logout() {
   rematchRequestModal?.classList.add("hidden");
   pendingRematchGameId = null;
   renderGameChat();
+  clearTimeTrouble();
   hideMatchIntro();
   appView.classList.add("hidden");
   authView.classList.remove("hidden");
