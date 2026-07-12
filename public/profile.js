@@ -745,7 +745,7 @@ function renderAnalysisHtml(analysis) {
       <section class="analysis-efficiency-card">
         <p class="eyebrow">Total result</p>
         <strong>${analysis.accuracy}%</strong>
-        <span>Total efficiency / accuracy rate</span>
+        <span>Accuracy rate</span>
         <small>Average loss ${analysis.averageLoss}</small>
       </section>
       <section class="analysis-counts-card">
