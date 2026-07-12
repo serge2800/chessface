@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-12-rematch-popup-v1";
+const APP_VERSION = "2026-07-12-rematch-board-reset-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -789,6 +789,7 @@ function connectSocket() {
 
 async function enterGame(game) {
   clearPostGameVideoTimer();
+  resetIncomingGameBoardState();
   gameResultModal?.classList.add("hidden");
   rematchRequestModal?.classList.add("hidden");
   pendingRematchGameId = null;
@@ -796,7 +797,6 @@ async function enterGame(game) {
     gameResultRematchButton.disabled = false;
     gameResultRematchButton.textContent = "Rematch";
   }
-  currentGame = game;
   gameChat = [];
   renderGameChat();
   hideSeeking();
@@ -812,6 +812,17 @@ async function enterGame(game) {
   sendSoundSettings();
   await startMediaAndPeer();
   scrollGameIntoViewOnStart();
+}
+
+function resetIncomingGameBoardState() {
+  finishPieceDrag();
+  selectedSquare = null;
+  clearPendingPremove();
+  playingPremove = false;
+  currentGame = null;
+  if (board) board.innerHTML = "";
+  accuracyAnalysisRunId += 1;
+  analyzingAccuracyGameId = "";
 }
 
 function scrollGameIntoViewOnStart() {
