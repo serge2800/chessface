@@ -5631,20 +5631,33 @@ body[data-board-theme="wood"] {
   pointer-events: none;
 }
 
-.spectator-board-side-controls::before {
-  content: "Watching";
-  display: grid;
-  min-height: 46px;
-  place-items: center;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: 8px;
-  color: var(--gold);
-  background: rgba(0, 0, 0, 0.28);
-  font-weight: 1000;
+.spectator-board-side-controls .board-animation-slots {
+  top: calc(-1 * var(--board-top-lift));
+  bottom: auto;
+  left: 50%;
+  width: min(150px, 100%);
+  height: calc(var(--play-surface-size) + var(--board-top-lift));
+  transform: translateX(-50%);
+}
+
+.spectator-board-side-controls .board-animation-slot {
+  left: 50%;
+  width: min(146px, 100%);
+  height: 136px;
+  transform: translateX(-50%);
+}
+
+.spectator-board-side-controls .board-animation-slot-top {
+  top: 88px;
+}
+
+.spectator-board-side-controls .board-animation-slot-bottom {
+  top: auto;
+  bottom: 170px;
 }
 
 .spectator-game-layout .watch-board-wrap {
+  grid-template-columns: minmax(150px, 190px) minmax(0, auto);
   width: 100%;
   margin: 0;
 }
