@@ -157,23 +157,14 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-match-intro-v1";
+const APP_VERSION = "2026-07-13-match-intro-fight-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
 const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
 const THINKING_DELAY_MS = 20000;
-const MATCH_INTRO_MS = 1450;
-const MATCH_INTRO_LINES = [
-  "Cameras on. Pride optional.",
-  "Two faces enter. One rating survives.",
-  "Smile now. Blunders are forever.",
-  "The board is warming up.",
-  "Opponent found. Try to look confident.",
-  "Opening theory loading... probably.",
-  "Handshake skipped. Chaos accepted."
-];
+const MATCH_INTRO_MS = 2000;
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
   height: { ideal: VIDEO_OUTPUT_HEIGHT, max: 360 },
@@ -1075,10 +1066,10 @@ function showMatchIntro(game) {
   const opponentColor = myColor === "white" ? "black" : "white";
   const meName = game.players?.[myColor]?.username || "You";
   const opponentName = game.players?.[opponentColor]?.username || "Opponent";
-  if (matchIntroTitle) matchIntroTitle.textContent = `${game.timeControl || "Live"} match`;
-  if (matchIntroYou) matchIntroYou.textContent = `${flagEmoji(game.players?.[myColor]?.countryCode)} ${meName}`;
-  if (matchIntroOpponent) matchIntroOpponent.textContent = `${flagEmoji(game.players?.[opponentColor]?.countryCode)} ${opponentName}`;
-  if (matchIntroLine) matchIntroLine.textContent = MATCH_INTRO_LINES[Math.floor(Math.random() * MATCH_INTRO_LINES.length)];
+  if (matchIntroTitle) matchIntroTitle.textContent = "⚔️";
+  if (matchIntroYou) matchIntroYou.textContent = meName;
+  if (matchIntroOpponent) matchIntroOpponent.textContent = opponentName;
+  if (matchIntroLine) matchIntroLine.textContent = "Fight!";
   lobby.classList.add("hidden");
   seekingPanel.classList.add("hidden");
   matchIntro.classList.remove("hidden");
