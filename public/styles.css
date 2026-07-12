@@ -5561,6 +5561,33 @@ body[data-board-theme="wood"] {
   outline-offset: -2px;
 }
 
+.watch-open-button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(242, 198, 109, 0.45);
+  border-radius: 8px;
+  background: rgba(242, 198, 109, 0.16);
+  color: var(--gold);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.watch-open-button:hover,
+.watch-open-button:focus-visible {
+  background: rgba(242, 198, 109, 0.25);
+  outline: none;
+}
+
+.watch-inline-notice {
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 198, 109, 0.36);
+  border-radius: 8px;
+  background: rgba(242, 198, 109, 0.12);
+  color: var(--ink);
+  font-weight: 850;
+}
+
 .watch-rank,
 .watch-rating {
   color: var(--gold) !important;

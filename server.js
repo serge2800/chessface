@@ -1935,10 +1935,11 @@ io.on("connection", (socket) => {
     socket.emit("watch:list", { games: watchListPayload() });
   });
 
-  socket.on("watch:join", ({ gameId } = {}) => {
+  socket.on("watch:join", ({ gameId } = {}, reply) => {
     const state = sockets.get(socket.id);
     const game = games.get(gameId);
     if (!state || !game || game.status !== "playing") {
+      if (typeof reply === "function") reply({ ok: false, message: "That game is no longer available to watch." });
       socket.emit("error:message", "That game is no longer available to watch.");
       socket.emit("watch:list", { games: watchListPayload() });
       return;
@@ -1948,7 +1949,9 @@ io.on("connection", (socket) => {
     }
     state.watchingGameId = game.id;
     socket.join(watchRoom(game.id));
-    socket.emit("watch:game", watchGamePayload(game));
+    const payload = watchGamePayload(game);
+    if (typeof reply === "function") reply({ ok: true, game: payload });
+    socket.emit("watch:game", payload);
     socket.emit("watch:chat:history", {
       gameId: game.id,
       messages: Array.isArray(game.spectatorChat) ? game.spectatorChat.slice(-80) : []

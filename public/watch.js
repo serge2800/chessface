@@ -15,6 +15,7 @@ const token = localStorage.getItem("chessface:token");
 let socket = null;
 let liveGames = [];
 let selectedGame = null;
+let watchNotice = "";
 
 renderNavigation();
 
@@ -25,6 +26,19 @@ watchLogoutButton?.addEventListener("click", () => {
 });
 
 refreshWatchButton?.addEventListener("click", () => socket?.emit("watch:list"));
+watchGamesList?.addEventListener("click", (event) => {
+  const row = event.target instanceof Element ? event.target.closest("[data-game-id]") : null;
+  if (!row || !watchGamesList.contains(row)) return;
+  joinGame(row.dataset.gameId);
+});
+watchGamesList?.addEventListener("keydown", (event) => {
+  const row = event.target instanceof Element ? event.target.closest("[data-game-id]") : null;
+  if (!row || !watchGamesList.contains(row)) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    joinGame(row.dataset.gameId);
+  }
+});
 
 if (!token) {
   renderSignedOut();
@@ -36,6 +50,7 @@ function connectSocket() {
   socket = io({ auth: { token } });
   socket.on("connect", () => socket.emit("watch:list"));
   socket.on("connect_error", () => renderSignedOut("Please log in again to see live games."));
+  socket.on("error:message", (message) => showWatchNotice(message || "That game could not be opened."));
   socket.on("profile", (user) => {
     localStorage.setItem("chessface:user", JSON.stringify(user));
     renderNavigation();
@@ -90,11 +105,13 @@ function renderGameTable() {
         <td class="watch-rating">${formatRating(black.rating)}</td>
         <td>${escapeHtml(game.timeControl || "-")}</td>
         <td>${game.moveCount || 0}</td>
+        <td><button type="button" class="watch-open-button">Watch</button></td>
       </tr>
     `;
   }).join("");
 
   watchGamesList.innerHTML = `
+    ${watchNotice ? `<div class="watch-inline-notice">${escapeHtml(watchNotice)}</div>` : ""}
     <div class="watch-table-wrap">
       <table class="watch-table">
         <thead>
@@ -106,27 +123,41 @@ function renderGameTable() {
             <th>Black rating</th>
             <th>Time</th>
             <th>Moves</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
   `;
-
-  watchGamesList.querySelectorAll("[data-game-id]").forEach((row) => {
-    row.addEventListener("click", () => joinGame(row.dataset.gameId));
-    row.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        joinGame(row.dataset.gameId);
-      }
-    });
-  });
 }
 
 function joinGame(gameId) {
   if (!gameId) return;
-  socket?.emit("watch:join", { gameId });
+  if (!socket?.connected) {
+    showWatchNotice("Connecting to live games. Try again in a moment.");
+    return;
+  }
+  watchNotice = "";
+  const summary = liveGames.find((game) => game.id === gameId);
+  if (summary) {
+    selectedGame = { ...summary, loading: true };
+    renderSelectedGame();
+    renderGameTable();
+  }
+  socket.timeout(3000).emit("watch:join", { gameId }, (error, response) => {
+    if (error) {
+      showWatchNotice("Opening that game took too long. Tap Watch again.");
+      return;
+    }
+    if (!response?.ok) {
+      showWatchNotice(response?.message || "That game is no longer available to watch.");
+      return;
+    }
+    selectedGame = response.game;
+    renderSelectedGame();
+    renderGameTable();
+  });
 }
 
 function renderSelectedGame() {
@@ -146,12 +177,21 @@ function renderSelectedGame() {
   `;
   renderWatchPlayer(watchBlackPlayer, black, selectedGame.clocks?.black);
   renderWatchPlayer(watchWhitePlayer, white, selectedGame.clocks?.white);
-  renderBoard(selectedGame.fen, selectedGame.lastMove);
+  if (selectedGame.loading && !selectedGame.fen) {
+    renderEmptyBoard();
+  } else {
+    renderBoard(selectedGame.fen, selectedGame.lastMove);
+  }
   watchMoveStatus.textContent = selectedGame.status === "playing"
-    ? `${selectedGame.turn === "white" ? "White" : "Black"} to move · ${selectedGame.moveCount || 0} moves`
+    ? `${selectedGame.loading ? "Opening game" : selectedGame.turn === "white" ? "White" : "Black"}${selectedGame.loading ? "" : " to move"} · ${selectedGame.moveCount || 0} moves`
     : "Game finished";
   watchSpectatorCount.textContent = `${selectedGame.spectatorCount || 0} watching`;
   watchDetailSection?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+function showWatchNotice(message) {
+  watchNotice = message;
+  renderGameTable();
 }
 
 function renderWatchPlayer(container, players, clock) {
