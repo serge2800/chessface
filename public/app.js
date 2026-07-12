@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-safe-socket-v1";
+const APP_VERSION = "2026-07-12-session-recovery-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -720,7 +720,7 @@ function connectSocket() {
   if (socket) socket.disconnect();
   socket = io({ auth: { token } });
   socket.on("connect", sendSoundSettings);
-  socket.on("connect_error", (error) => showNotice(error.message));
+  socket.on("connect_error", handleSocketConnectError);
   socket.on("error:message", handleErrorMessage);
   socket.on("queue:waiting", (time) => {
     statusTitle.textContent = `Seeking ${time}`;
@@ -785,6 +785,18 @@ function connectSocket() {
     renderVideoControls(currentGame);
     await startMediaAndPeer();
   });
+}
+
+function handleSocketConnectError(error) {
+  const message = String(error?.message || "");
+  if (message.toLowerCase().includes("unauthorized")) {
+    localStorage.removeItem("chessface:token");
+    sessionStorage.setItem("chessface:notice", "Your session expired. Please log in again.");
+    location.href = "/";
+    return;
+  }
+  if (message.toLowerCase().includes("xhr post error")) return;
+  showNotice(message || "Connection interrupted.");
 }
 
 async function enterGame(game) {

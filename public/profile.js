@@ -123,14 +123,7 @@ async function bootProfile() {
 }
 
 async function bootSharedAnalysisPage(gameId) {
-  const [profileResult, gameResponse] = await Promise.all([
-    token
-      ? fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
-        .then((response) => response.ok ? response.json() : null)
-        .catch(() => null)
-      : Promise.resolve(null),
-    fetch(`/api/public/games/${encodeURIComponent(gameId)}`)
-  ]);
+  const gameResponse = await fetch(`/api/public/games/${encodeURIComponent(gameId)}`);
 
   const gameData = await gameResponse.json().catch(() => ({}));
   if (!gameResponse.ok || !gameData.game) {
@@ -139,7 +132,7 @@ async function bootSharedAnalysisPage(gameId) {
     return;
   }
 
-  me = profileResult?.user || {
+  me = {
     id: gameData.game.players?.white?.id || "public-viewer",
     username: "Viewer",
     fullName: "Shared game analysis",
@@ -152,8 +145,7 @@ async function bootSharedAnalysisPage(gameId) {
     countryName: "Other"
   };
   games = [gameData.game];
-  if (profileResult?.user) renderProfile();
-  else renderPublicAnalysisHeader(gameData.game);
+  renderPublicAnalysisHeader(gameData.game);
   renderAnalysisPage();
 }
 

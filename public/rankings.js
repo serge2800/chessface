@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-12-safe-socket-v1", "/styles.css?v=2026-07-12-safe-socket-v1"];
+  const assets = ["/", "/app.js?v=2026-07-12-session-recovery-v1", "/styles.css?v=2026-07-12-session-recovery-v1"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");
