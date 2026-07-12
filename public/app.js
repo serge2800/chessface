@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-fast-moves-v1";
+const APP_VERSION = "2026-07-12-safe-socket-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -718,12 +718,7 @@ function handleErrorMessage(message) {
 
 function connectSocket() {
   if (socket) socket.disconnect();
-  socket = io({
-    auth: { token },
-    transports: ["websocket", "polling"],
-    upgrade: true,
-    rememberUpgrade: true
-  });
+  socket = io({ auth: { token } });
   socket.on("connect", sendSoundSettings);
   socket.on("connect_error", (error) => showNotice(error.message));
   socket.on("error:message", handleErrorMessage);
