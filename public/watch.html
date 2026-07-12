@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-game-layout-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-spectator-game-v2" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -45,30 +45,47 @@
         </div>
       </section>
 
-      <section class="watch-detail-section hidden" id="watchDetailSection" aria-label="Selected live game">
-        <section class="watch-board-panel">
+      <section class="watch-detail-section game-layout spectator-game-layout hidden" id="watchDetailSection" aria-label="Selected live game">
+        <section class="watch-board-panel board-wrap">
           <div class="watch-matchup" id="watchMatchup">
             <p class="eyebrow">Watching</p>
             <h2>Select a live game</h2>
             <span>Click a row above to open the board.</span>
           </div>
-          <div class="watch-board-wrap">
-            <div class="watch-player watch-player-top" id="watchBlackPlayer"></div>
+          <div class="watch-player watch-player-top board-player board-player-top" id="watchBlackPlayer"></div>
+          <div class="watch-board-wrap board-stage">
+            <div class="board-side-controls spectator-board-side-controls" aria-label="Spectator evaluation">
+              <div class="board-animation-slots" aria-label="Evaluation animation slots">
+                <div class="board-animation-slot board-animation-slot-top">
+                  <video id="watchTopDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Top player evaluation mood"></video>
+                </div>
+                <div class="board-animation-slot board-animation-slot-middle" aria-hidden="true"></div>
+                <div class="board-animation-slot board-animation-slot-bottom">
+                  <video id="watchBottomDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Bottom player evaluation mood"></video>
+                </div>
+              </div>
+            </div>
+            <div class="eval-bar watch-eval-bar" id="watchEvalBar" aria-label="Position evaluation">
+              <div class="eval-bar-fill" id="watchEvalBarFill"></div>
+              <span id="watchEvalBarLabel">0.0</span>
+            </div>
             <div class="board watch-board" id="watchBoard" aria-label="Watched chess board"></div>
-            <div class="watch-player watch-player-bottom" id="watchWhitePlayer"></div>
           </div>
-          <div class="watch-status-row">
-            <span id="watchMoveStatus">No game selected</span>
-            <span id="watchSpectatorCount">0 watching</span>
+          <div class="watch-player watch-player-bottom board-player board-player-bottom" id="watchWhitePlayer"></div>
+          <div class="watch-status-row board-meta">
+            <div class="turn-card">
+              <span id="watchMoveStatus">No game selected</span>
+              <strong id="watchSpectatorCount">0 watching</strong>
+            </div>
           </div>
         </section>
-        <aside class="watch-side-panel" aria-label="Live cameras and chat">
-          <div class="watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
-            <div class="watch-video-tile" data-watch-video="white">
+        <aside class="watch-side-panel video-panel" aria-label="Live cameras and chat">
+          <div class="video-grid watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
+            <div class="video-tile watch-video-tile" data-watch-video="white">
               <video id="watchWhiteVideo" autoplay playsinline muted></video>
               <span id="watchWhiteVideoLabel">White camera</span>
             </div>
-            <div class="watch-video-tile" data-watch-video="black">
+            <div class="video-tile watch-video-tile" data-watch-video="black">
               <video id="watchBlackVideo" autoplay playsinline muted></video>
               <span id="watchBlackVideoLabel">Black camera</span>
             </div>
@@ -95,6 +112,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-13-watch-game-layout-v2"></script>
+    <script src="watch.js?v=2026-07-13-watch-spectator-game-v2"></script>
   </body>
 </html>

@@ -5462,9 +5462,7 @@ body[data-board-theme="wood"] {
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
 }
 
-.watch-games-panel,
-.watch-board-panel,
-.watch-side-panel {
+.watch-games-panel {
   padding: 14px;
 }
 
@@ -5609,11 +5607,64 @@ body[data-board-theme="wood"] {
 }
 
 .watch-detail-section {
-  display: grid;
-  grid-template-columns: minmax(520px, 1fr) minmax(340px, 440px);
-  gap: 14px;
-  align-items: start;
   margin-top: 14px;
+}
+
+.watch-detail-section.game-layout {
+  --play-surface-size: min(82vh, calc(100vw - 450px), 960px);
+}
+
+.spectator-game-layout .watch-board-panel {
+  padding: 14px;
+}
+
+.spectator-game-layout .watch-board-panel .watch-matchup {
+  display: none;
+}
+
+.spectator-game-layout .watch-side-panel {
+  padding: 14px 14px 14px 0;
+}
+
+.spectator-board-side-controls {
+  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
+  pointer-events: none;
+}
+
+.spectator-board-side-controls::before {
+  content: "Watching";
+  display: grid;
+  min-height: 46px;
+  place-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 8px;
+  color: var(--gold);
+  background: rgba(0, 0, 0, 0.28);
+  font-weight: 1000;
+}
+
+.spectator-game-layout .watch-board-wrap {
+  width: 100%;
+  margin: 0;
+}
+
+.spectator-game-layout .watch-board-wrap > .watch-board {
+  grid-column: 2;
+  grid-row: 1;
+  width: calc(var(--play-surface-size) + var(--board-top-lift));
+  max-width: calc(100% + var(--board-top-lift));
+  margin-top: calc(-1 * var(--board-top-lift));
+  justify-self: end;
+  transform: translate(62px, 5px) !important;
+}
+
+.spectator-game-layout .watch-eval-bar {
+  transform: translate(12px, 3px) !important;
+}
+
+.spectator-game-layout .board-meta .turn-card {
+  display: grid;
 }
 
 .watch-video-grid {
@@ -5716,13 +5767,6 @@ body[data-board-theme="wood"] {
 
 .watch-game-card small {
   justify-self: end;
-}
-
-.watch-board-wrap {
-  width: min(760px, 100%);
-  margin: 0 auto;
-  display: grid;
-  gap: 8px;
 }
 
 .watch-board {

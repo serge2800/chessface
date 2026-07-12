@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-13-livekit-spectator-filter-v1", "/styles.css?v=2026-07-13-watch-game-layout-v1", "/watch.html", "/watch.js?v=2026-07-13-watch-game-layout-v2"];
+  const assets = ["/", "/app.js?v=2026-07-13-livekit-spectator-filter-v1", "/styles.css?v=2026-07-13-watch-spectator-game-v2", "/watch.html", "/watch.js?v=2026-07-13-watch-spectator-game-v2"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");

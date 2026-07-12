@@ -6,6 +6,10 @@ const watchWhitePlayer = document.querySelector("#watchWhitePlayer");
 const watchBlackPlayer = document.querySelector("#watchBlackPlayer");
 const watchMoveStatus = document.querySelector("#watchMoveStatus");
 const watchSpectatorCount = document.querySelector("#watchSpectatorCount");
+const watchEvalBarFill = document.querySelector("#watchEvalBarFill");
+const watchEvalBarLabel = document.querySelector("#watchEvalBarLabel");
+const watchTopDonkeyMood = document.querySelector("#watchTopDonkeyMood");
+const watchBottomDonkeyMood = document.querySelector("#watchBottomDonkeyMood");
 const watchWhiteVideo = document.querySelector("#watchWhiteVideo");
 const watchBlackVideo = document.querySelector("#watchBlackVideo");
 const watchWhiteVideoLabel = document.querySelector("#watchWhiteVideoLabel");
@@ -20,6 +24,20 @@ const watchLoginLink = document.querySelector("#watchLoginLink");
 const refreshWatchButton = document.querySelector("#refreshWatchButton");
 
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
+const WATCH_DONKEY_MOODS = [
+  { id: "10-losing-crushed", webm: "/assets/eval-optimized/10.webm", mp4: "/assets/eval-optimized/10.mp4", label: "Losing badly", max: -800 },
+  { id: "9-losing-horrible", webm: "/assets/eval-optimized/9.webm", mp4: "/assets/eval-optimized/9.mp4", label: "Very bad", max: -500 },
+  { id: "8-losing-danger", webm: "/assets/eval-optimized/8.webm", mp4: "/assets/eval-optimized/8.mp4", label: "In danger", max: -300 },
+  { id: "7-losing-worse", webm: "/assets/eval-optimized/7.webm", mp4: "/assets/eval-optimized/7.mp4", label: "Worse", max: -150 },
+  { id: "6-losing-slightly", webm: "/assets/eval-optimized/6.webm", mp4: "/assets/eval-optimized/6.mp4", label: "Slightly worse", max: -30 },
+  { id: "5-balanced", webm: "/assets/eval-optimized/5.webm", mp4: "/assets/eval-optimized/5.mp4", label: "Balanced", max: 30 },
+  { id: "4-winning-slightly", webm: "/assets/eval-optimized/4.webm", mp4: "/assets/eval-optimized/4.mp4", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", webm: "/assets/eval-optimized/3.webm", mp4: "/assets/eval-optimized/3.mp4", label: "Good", max: 300 },
+  { id: "2-winning-very-good", webm: "/assets/eval-optimized/2.webm", mp4: "/assets/eval-optimized/2.mp4", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", webm: "/assets/eval-optimized/1.webm", mp4: "/assets/eval-optimized/1.mp4", label: "Winning big", max: Infinity }
+];
+const WATCH_DONKEY_FALLBACK_MOOD = WATCH_DONKEY_MOODS[5];
+const WATCH_PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900 };
 const token = localStorage.getItem("chessface:token");
 let socket = null;
 let liveGames = [];
@@ -30,6 +48,9 @@ let liveKitModulePromise = null;
 let watchLiveKitRoom = null;
 let watchLiveKitTracks = new Map();
 let watchCameraStatusTimer = null;
+let watchDonkeyFormat = null;
+let watchDonkeyWarmupStarted = false;
+const watchDonkeyPreloads = new Map();
 
 renderNavigation();
 
@@ -217,8 +238,10 @@ function renderSelectedGame() {
   renderWatchPlayer(watchWhitePlayer, white, selectedGame.clocks?.white);
   if (selectedGame.loading && !selectedGame.fen) {
     renderEmptyBoard();
+    updateWatchEvaluation(0);
   } else {
     renderBoard(selectedGame.fen, selectedGame.lastMove);
+    updateWatchEvaluation(materialCentipawnsFromFen(selectedGame.fen));
   }
   watchMoveStatus.textContent = selectedGame.status === "playing"
     ? `${selectedGame.loading ? "Opening game" : selectedGame.turn === "white" ? "White" : "Black"}${selectedGame.loading ? "" : " to move"} · ${selectedGame.moveCount || 0} moves`
@@ -228,12 +251,97 @@ function renderSelectedGame() {
   renderWatchChatState();
   renderWatchChat();
   renderWatchVideoPlaceholders();
+  scheduleWatchDonkeyWarmup();
 }
 
 function showWatchNotice(message) {
   watchNotice = message;
   renderGameTable();
 }
+
+function updateWatchEvaluation(whiteCentipawns) {
+  const value = Number(whiteCentipawns) || 0;
+  const whiteHeight = Math.max(6, Math.min(94, 50 + Math.tanh(value / 600) * 44));
+  if (watchEvalBarFill) watchEvalBarFill.style.height = `${whiteHeight}%`;
+  if (watchEvalBarLabel) {
+    const pawns = Math.abs(value / 100).toFixed(1);
+    watchEvalBarLabel.textContent = value >= 0 ? `+${pawns}` : `-${pawns}`;
+  }
+  updateWatchDonkeyMoods(value);
+}
+
+function materialCentipawnsFromFen(fen) {
+  const boardFen = String(fen || "").split(" ")[0];
+  let score = 0;
+  for (const char of boardFen) {
+    const value = WATCH_PIECE_VALUES[char.toLowerCase()];
+    if (!value) continue;
+    score += char === char.toUpperCase() ? value : -value;
+  }
+  return score;
+}
+
+function updateWatchDonkeyMoods(whiteCentipawns) {
+  setWatchDonkeyMood(watchTopDonkeyMood, watchDonkeyMoodForColor("black", whiteCentipawns));
+  setWatchDonkeyMood(watchBottomDonkeyMood, watchDonkeyMoodForColor("white", whiteCentipawns));
+}
+
+function watchDonkeyMoodForColor(color, whiteCentipawns) {
+  const playerCentipawns = color === "black" ? -whiteCentipawns : whiteCentipawns;
+  return WATCH_DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || WATCH_DONKEY_FALLBACK_MOOD;
+}
+
+function setWatchDonkeyMood(video, mood) {
+  if (!video || !mood || video.dataset.mood === mood.id) return;
+  const source = watchDonkeySource(mood);
+  video.dataset.mood = mood.id;
+  video.classList.add("is-changing");
+  video.setAttribute("aria-label", mood.label + " position mood");
+  if (!video.currentSrc.endsWith(source) && !video.src.endsWith(source)) {
+    video.src = source;
+    video.load();
+  }
+  video.play?.().catch(() => {});
+  window.setTimeout(() => video.classList.remove("is-changing"), 160);
+}
+
+function scheduleWatchDonkeyWarmup() {
+  if (watchDonkeyWarmupStarted) return;
+  watchDonkeyWarmupStarted = true;
+  const run = () => WATCH_DONKEY_MOODS.map(watchDonkeySource).forEach(preloadWatchDonkey);
+  if ("requestIdleCallback" in window) window.setTimeout(() => window.requestIdleCallback(run, { timeout: 2500 }), 400);
+  else window.setTimeout(run, 900);
+}
+
+function watchDonkeySource(mood) {
+  if (!watchDonkeyFormat) {
+    const probe = document.createElement("video");
+    watchDonkeyFormat = probe.canPlayType('video/webm; codecs="vp9"') ? "webm" : "mp4";
+  }
+  return mood?.[watchDonkeyFormat] || mood?.mp4 || WATCH_DONKEY_FALLBACK_MOOD.mp4;
+}
+
+function preloadWatchDonkey(src) {
+  if (!src || watchDonkeyPreloads.has(src)) return;
+  const video = document.createElement("video");
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = src;
+  video.load();
+  watchDonkeyPreloads.set(src, video);
+}
+
+[watchTopDonkeyMood, watchBottomDonkeyMood].forEach((video) => {
+  video?.addEventListener("error", () => {
+    const fallback = watchDonkeySource(WATCH_DONKEY_FALLBACK_MOOD);
+    if (video.src.endsWith(fallback)) return;
+    video.src = fallback;
+    video.load();
+    video.play?.().catch(() => {});
+  });
+});
 
 function addWatchChatMessage(message) {
   if (!selectedGame || message.gameId !== selectedGame.id) return;
