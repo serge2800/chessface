@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-12-move-latency-v1", "/styles.css?v=2026-07-12-move-latency-v1"];
+  const assets = ["/", "/app.js?v=2026-07-12-fast-moves-v1", "/styles.css?v=2026-07-12-fast-moves-v1"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");

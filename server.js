@@ -951,7 +951,7 @@ function videoPeerPayload(game, viewerId, player) {
 function emitGame(game) {
   for (const player of gamePlayers(game)) {
     const liveSocket = socketForGamePlayer(game, player);
-    io.to(liveSocket?.id || player.socketId).emit("game:update", gamePayload(game, player.id));
+    io.to(liveSocket?.id || player.socketId).compress(false).emit("game:update", gamePayload(game, player.id));
   }
 }
 
