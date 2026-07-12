@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-face-mesh-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-table-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -30,58 +30,23 @@
         </nav>
       </header>
 
-      <section class="watch-grid">
-        <aside class="watch-games-panel" aria-label="Live games">
+      <section class="watch-table-section" aria-label="Live games">
+        <div class="watch-games-panel">
           <div class="watch-panel-head">
             <div>
               <p class="eyebrow">Live now</p>
-              <h1>Games to watch</h1>
+              <h1>Games being played</h1>
             </div>
             <button type="button" class="ghost logout-button" id="refreshWatchButton">Refresh</button>
           </div>
           <div class="watch-games-list" id="watchGamesList">
             <div class="watch-empty">Loading live games...</div>
           </div>
-        </aside>
-
-        <section class="watch-board-panel" aria-label="Selected game">
-          <div class="watch-matchup" id="watchMatchup">
-            <p class="eyebrow">Spectator board</p>
-            <h2>Select a live game</h2>
-            <span>Games are sorted by combined player rating.</span>
-          </div>
-          <div class="watch-board-wrap">
-            <div class="watch-player watch-player-top" id="watchBlackPlayer"></div>
-            <div class="board watch-board" id="watchBoard" aria-label="Watched chess board"></div>
-            <div class="watch-player watch-player-bottom" id="watchWhitePlayer"></div>
-          </div>
-          <div class="watch-status-row">
-            <span id="watchMoveStatus">No game selected</span>
-            <span id="watchSpectatorCount">0 watching</span>
-          </div>
-        </section>
-
-        <aside class="game-chat watch-chat-panel" aria-label="Spectator chat">
-          <div class="game-chat-head">
-            <div>
-              <p class="eyebrow">Spectator chat</p>
-              <h3>Watch room</h3>
-            </div>
-            <span id="watchChatStatus">Closed</span>
-          </div>
-          <div class="game-chat-messages" id="watchChatMessages" aria-live="polite">
-            <p class="chat-empty">Select a live game to chat with other spectators.</p>
-          </div>
-          <form class="game-chat-form" id="watchChatForm">
-            <input id="watchChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." disabled />
-            <button type="submit" id="watchChatSubmit" disabled>Send</button>
-          </form>
-        </aside>
+        </div>
       </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-12-face-mesh-v1"></script>
+    <script src="watch.js?v=2026-07-12-watch-table-v1"></script>
   </body>
 </html>
