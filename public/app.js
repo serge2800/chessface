@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-donkey-share-scroll-v1";
+const APP_VERSION = "2026-07-12-fast-home-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -160,9 +160,11 @@ const VIDEO_CONSTRAINTS = {
 
 let mode = "login";
 let token = localStorage.getItem("chessface:token");
+let cachedUser = loadCachedUser();
 let settings = loadSettings();
 let socket;
 let me;
+let appShown = false;
 let selectedTime = "5+0";
 let currentGame;
 let postGameVideoTimer;
@@ -173,6 +175,7 @@ let liveEvalReadyPromise = null;
 let liveEvalCleanup = null;
 let liveEvalTimer = null;
 let liveEvalSearchId = 0;
+let accuracyAnalysisServicePromise = null;
 const DONKEY_MOODS = [
   { id: "10-losing-crushed", src: "/assets/eval/10.mov", label: "Losing badly", max: -800 },
   { id: "9-losing-horrible", src: "/assets/eval/9.mov", label: "Very bad", max: -500 },
@@ -397,6 +400,7 @@ authForm.addEventListener("submit", async (event) => {
     token = data.token;
     me = data.user;
     localStorage.setItem("chessface:token", token);
+    saveCachedUser(me);
     showApp();
   } catch (error) {
     authNotice.textContent = error.message;
@@ -416,6 +420,7 @@ guestButton?.addEventListener("click", async () => {
     token = data.token;
     me = data.user;
     localStorage.setItem("chessface:token", token);
+    saveCachedUser(me);
     showApp();
   } catch (error) {
     authNotice.textContent = error.message;
@@ -612,7 +617,12 @@ function openProfile(event) {
 
 profileButton.addEventListener("click", openProfile);
 logoutButton.addEventListener("click", logout);
-if (settingsButton && settingsModal) settingsButton.addEventListener("click", () => settingsModal.classList.remove("hidden"));
+if (settingsButton && settingsModal) {
+  settingsButton.addEventListener("click", () => {
+    settingsModal.classList.remove("hidden");
+    loadSoundManifest();
+  });
+}
 if (closeSettingsButton && settingsModal) closeSettingsButton.addEventListener("click", () => settingsModal.classList.add("hidden"));
 if (settingsModal) {
   settingsModal.addEventListener("click", (event) => {
@@ -637,6 +647,7 @@ if (settingsModal) {
 });
 if (checkSoundSearch) {
   checkSoundSearch.addEventListener("input", () => {
+    loadSoundManifest();
     populateSoundDropdown(checkSoundSetting, soundSettings.checkSound, {
       includeNone: true,
       includeRandom: true,
@@ -650,6 +661,7 @@ if (checkSoundSearch) {
 }
 if (checkmateSoundSearch) {
   checkmateSoundSearch.addEventListener("input", () => {
+    loadSoundManifest();
     populateSoundDropdown(checkmateSoundSetting, soundSettings.checkmateSound, {
       includeNone: false,
       includeRandom: true,
@@ -673,19 +685,28 @@ boardThemeButtons.forEach((button) => {
 
 async function boot() {
   if (!token) return;
+  if (cachedUser) {
+    me = cachedUser;
+    showApp({ refreshOnly: false });
+  }
   try {
     const response = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error("Expired");
     const data = await response.json();
     me = data.user;
-    showApp();
+    saveCachedUser(me);
+    showApp({ refreshOnly: appShown });
   } catch {
     localStorage.removeItem("chessface:token");
+    localStorage.removeItem("chessface:user");
     token = null;
+    if (!appShown) return;
+    location.href = "/";
   }
 }
 
-function showApp() {
+function showApp({ refreshOnly = false } = {}) {
+  appShown = true;
   authView.classList.add("hidden");
   marketingView?.classList.add("hidden");
   appView.classList.remove("hidden");
@@ -694,12 +715,25 @@ function showApp() {
   document.querySelector("#myCountryFlag").textContent = flagEmoji(me.countryCode);
   document.querySelector("#myName").textContent = me.username;
   document.querySelector("#myRating").textContent = `${me.rating} rating · ${me.gamesPlayed || 0} games`;
-  connectSocket();
+  if (!refreshOnly || !socket) connectSocket();
   const pendingNotice = sessionStorage.getItem("chessface:notice");
   if (pendingNotice) {
     sessionStorage.removeItem("chessface:notice");
     showNotice(pendingNotice);
   }
+}
+
+function loadCachedUser() {
+  try {
+    return JSON.parse(localStorage.getItem("chessface:user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedUser(user) {
+  if (!user) return;
+  localStorage.setItem("chessface:user", JSON.stringify(user));
 }
 
 function flagEmoji(countryCode) {
@@ -791,6 +825,7 @@ function handleSocketConnectError(error) {
   const message = String(error?.message || "");
   if (message.toLowerCase().includes("unauthorized")) {
     localStorage.removeItem("chessface:token");
+    localStorage.removeItem("chessface:user");
     sessionStorage.setItem("chessface:notice", "Your session expired. Please log in again.");
     location.href = "/";
     return;
@@ -1169,7 +1204,8 @@ async function maybeStartAccuracyAnalysis(game) {
   accuracyAnalysisPanel.classList.add("hidden");
   accuracyAnalysisStatus.textContent = "Starting Stockfish accuracy analysis...";
   try {
-    const analysis = await window.ChessFaceAccuracyAnalysis.analyzeGame(game, ({ message }) => {
+    const accuracyService = await loadAccuracyAnalysisService();
+    const analysis = await accuracyService.analyzeGame(game, ({ message }) => {
       if (accuracyAnalysisRunId === runId && currentGame?.id === game.id) {
         accuracyAnalysisStatus.textContent = message;
       }
@@ -1187,6 +1223,23 @@ async function maybeStartAccuracyAnalysis(game) {
   } finally {
     if (accuracyAnalysisRunId === runId) analyzingAccuracyGameId = "";
   }
+}
+
+function loadAccuracyAnalysisService() {
+  if (window.ChessFaceAccuracyAnalysis) return Promise.resolve(window.ChessFaceAccuracyAnalysis);
+  if (accuracyAnalysisServicePromise) return accuracyAnalysisServicePromise;
+  accuracyAnalysisServicePromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `stockfish-analysis-service.js?v=${encodeURIComponent(APP_VERSION)}`;
+    script.async = true;
+    script.onload = () => window.ChessFaceAccuracyAnalysis ? resolve(window.ChessFaceAccuracyAnalysis) : reject(new Error("Accuracy analysis service unavailable."));
+    script.onerror = () => reject(new Error("Accuracy analysis service failed to load."));
+    document.head.append(script);
+  }).catch((error) => {
+    accuracyAnalysisServicePromise = null;
+    throw error;
+  });
+  return accuracyAnalysisServicePromise;
 }
 
 function renderAccuracyAnalysis(game, analysis) {
@@ -3724,6 +3777,7 @@ function logout() {
   closePeer();
   if (socket) socket.disconnect();
   localStorage.removeItem("chessface:token");
+  localStorage.removeItem("chessface:user");
   token = null;
   me = null;
   currentGame = null;
@@ -3806,6 +3860,7 @@ function soundMatchesQuery(sound, query) {
 }
 
 async function loadSoundManifest() {
+  if (window.ChessFaceSounds?.loadedRemoteManifest) return;
   try {
     const response = await fetch("/api/sounds", { cache: "no-store" });
     if (!response.ok) throw new Error(`Sound manifest failed with ${response.status}`);
@@ -3816,6 +3871,7 @@ async function loadSoundManifest() {
       { id: "random", label: "Random", file: null },
       ...nextSounds
     ]);
+    if (window.ChessFaceSounds) window.ChessFaceSounds.loadedRemoteManifest = true;
     soundSettings = normalizeSoundSettings(soundSettings);
     saveSoundSettings();
     syncSoundControls();
@@ -4084,7 +4140,6 @@ function capturedText(color, onBoard, starting) {
 
 syncSettingsControls();
 syncSoundControls();
-loadSoundManifest();
 applySettings();
 boot();
 scheduleDonkeyVideoWarmup();

@@ -1,4 +1,4 @@
-const CACHE_NAME = "chessface-shell-v245";
+const CACHE_NAME = "chessface-shell-v246";
 const NETWORK_FIRST_PATHS = new Set([
   "/",
   "/index.html",
@@ -12,39 +12,15 @@ const NETWORK_FIRST_PATHS = new Set([
 const SHELL_ASSETS = [
   "/",
   "/index.html",
-  "/profile.html",
-  "/analysis.html",
   "/rankings.html",
-  "/friends.html",
-  "/edit-profile.html",
   "/styles.css",
   "/pieces.js",
   "/app.js",
   "/config/sounds.js",
-  "/stockfish-analysis-service.js",
-  "/profile.js",
-  "/vendor/stockfish/stockfish-18-lite-single.js",
-  "/vendor/stockfish/stockfish-18-lite-single.wasm",
-  "/vendor/stockfish/stockfish-18-asm.js",
   "/rankings.js",
-  "/friends.js",
-  "/edit-profile.js",
   "/default-avatar.svg",
   "/app-icon.svg",
-  "/assets/chess-hero.png",
-  "/assets/normal-chessboard.svg",
-  "/assets/random_sound.png",
-  "/assets/donkeys/01-about-to-get-mated.png",
-  "/assets/donkeys/02-terrified.png",
-  "/assets/donkeys/03-panicking.png",
-  "/assets/donkeys/04-worried.png",
-  "/assets/donkeys/05-slightly-bad.png",
-  "/assets/donkeys/06-balanced.png",
-  "/assets/donkeys/07-slightly-good.png",
-  "/assets/donkeys/08-happy.png",
-  "/assets/donkeys/09-very-good.png",
-  "/assets/donkeys/10-about-to-mate.png",
-  "/assets/chessface-mobile-play.png"
+  "/assets/normal-chessboard.svg"
 ];
 
 self.addEventListener("install", (event) => {
