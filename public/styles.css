@@ -3720,6 +3720,7 @@ body[data-board-theme="wood"] {
 }
 
 .game-chat {
+  position: relative;
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -3843,15 +3844,23 @@ body[data-board-theme="wood"] {
 }
 
 .emoji-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 64px;
+  z-index: 40;
+  width: min(360px, calc(100% - 24px));
+  max-height: 260px;
+  overflow: auto;
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(34px, 1fr));
   gap: 6px;
-  margin-top: 8px;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  background: rgba(10, 15, 14, 0.94);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  background: rgba(10, 15, 14, 0.98);
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.44),
+    inset 0 0 0 1px rgba(242, 198, 109, 0.08);
 }
 
 .emoji-panel button {
@@ -4134,6 +4143,13 @@ body[data-board-theme="wood"] {
   .match-intro-vs strong {
     width: 100%;
     min-height: 44px;
+  }
+
+  .emoji-panel {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    grid-template-columns: repeat(6, minmax(34px, 1fr));
   }
 
   .feature-points div {

@@ -133,10 +133,13 @@ const pieceMap = {
 };
 const pieceArtMap = { p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚" };
 const chatEmojis = [
-  "😀", "😂", "😊", "😎", "🤔", "😅", "🙃", "😉", "😍", "😮", "😭", "😤",
-  "👍", "👏", "🙏", "🤝", "💪", "🔥", "✨", "🎉", "🏆", "💯", "👀", "❤️",
-  "♟️", "♞", "♜", "♛", "♚", "✅", "❌", "⚡", "🤯", "😬", "😇", "🥳",
-  "🍓", "👑", "🎩", "🕶️", "🤣", "😱", "😜", "🥲", "😈", "🫡", "🤌", "🌟"
+  "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "🙂", "🙃", "😉",
+  "😍", "🥰", "😘", "😎", "🤓", "🧐", "🤔", "🤨", "😮", "😯", "😲", "😳",
+  "😬", "😤", "😭", "🥲", "😱", "🤯", "😈", "😇", "🥳", "🫡", "🤌", "🤝",
+  "👍", "👎", "👏", "🙌", "🙏", "💪", "👀", "🧠", "☕", "🔥", "✨", "⚡",
+  "🎉", "🏆", "💯", "❤️", "💛", "💚", "💙", "💜", "👑", "🎩", "🕶️", "🍓",
+  "♟️", "♞", "♜", "♛", "♚", "⚔️", "🛡️", "🥷", "🧨", "💣", "🚀",
+  "✅", "❌", "📈", "📉", "⏰", "💀", "🤡", "🙈", "🙉", "🙊", "🫠", "😵‍💫"
 ];
 
 const defaultSettings = {
@@ -157,7 +160,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-match-intro-sword-v1";
+const APP_VERSION = "2026-07-13-emoji-popover-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -559,14 +562,17 @@ document.querySelector("#requestVideoButton").addEventListener("click", () => so
 document.querySelector("#acceptVideoButton").addEventListener("click", () => socket.emit("video:accept"));
 document.querySelector("#declineVideoButton").addEventListener("click", () => socket.emit("video:decline"));
 renderEmojiPicker();
-emojiToggle?.addEventListener("click", () => {
+emojiToggle?.addEventListener("click", (event) => {
+  event.stopPropagation();
   if (emojiToggle.disabled) return;
-  emojiPanel.classList.toggle("hidden");
+  const open = emojiPanel.classList.toggle("hidden") === false;
+  emojiToggle.setAttribute("aria-expanded", String(open));
 });
 document.addEventListener("click", (event) => {
   if (!emojiPanel || emojiPanel.classList.contains("hidden")) return;
   if (event.target === emojiToggle || emojiPanel.contains(event.target)) return;
   emojiPanel.classList.add("hidden");
+  emojiToggle?.setAttribute("aria-expanded", "false");
 });
 gameChatForm?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -583,6 +589,7 @@ function renderEmojiPicker() {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = emoji;
+    button.setAttribute("aria-label", `Add ${emoji}`);
     button.addEventListener("click", () => insertChatEmoji(emoji));
     emojiPanel.append(button);
   });
