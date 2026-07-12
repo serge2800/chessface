@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-table-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-click-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -44,9 +44,29 @@
           </div>
         </div>
       </section>
+
+      <section class="watch-detail-section hidden" id="watchDetailSection" aria-label="Selected live game">
+        <section class="watch-board-panel">
+          <div class="watch-matchup" id="watchMatchup">
+            <p class="eyebrow">Watching</p>
+            <h2>Select a live game</h2>
+            <span>Click a row above to open the board.</span>
+          </div>
+          <div class="watch-board-wrap">
+            <div class="watch-player watch-player-top" id="watchBlackPlayer"></div>
+            <div class="board watch-board" id="watchBoard" aria-label="Watched chess board"></div>
+            <div class="watch-player watch-player-bottom" id="watchWhitePlayer"></div>
+          </div>
+          <div class="watch-status-row">
+            <span id="watchMoveStatus">No game selected</span>
+            <span id="watchSpectatorCount">0 watching</span>
+          </div>
+        </section>
+      </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="watch.js?v=2026-07-12-watch-table-v1"></script>
+    <script src="pieces.js"></script>
+    <script src="watch.js?v=2026-07-12-watch-click-v1"></script>
   </body>
 </html>

@@ -5547,6 +5547,20 @@ body[data-board-theme="wood"] {
   background: rgba(242, 198, 109, 0.08);
 }
 
+.watch-table tbody tr {
+  cursor: pointer;
+}
+
+.watch-table tbody tr.selected {
+  background: rgba(242, 198, 109, 0.14);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.watch-table tbody tr:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
 .watch-rank,
 .watch-rating {
   color: var(--gold) !important;
@@ -5563,6 +5577,10 @@ body[data-board-theme="wood"] {
   border: 1px dashed rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+.watch-detail-section {
+  margin-top: 14px;
 }
 
 .watch-game-card {
