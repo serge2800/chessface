@@ -152,7 +152,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-donkey-video-optimized-v1";
+const APP_VERSION = "2026-07-13-livekit-spectator-filter-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -3079,6 +3079,10 @@ function syncLiveKitParticipants(room) {
 
 function syncLiveKitParticipant(participant) {
   const peerId = String(participant?.identity || "");
+  if (isLiveKitSpectatorParticipant(participant)) {
+    removePeerVideoTile(peerId);
+    return;
+  }
   if (peerId && peerId !== String(me?.id)) {
     const peer = liveKitPeerForParticipant(participant);
     const tile = peerVideoTiles.get(peerId) || ensurePeerVideoTile(peer);
@@ -3151,12 +3155,7 @@ function liveKitPeerForParticipant(participant) {
   const peerId = String(participant?.identity || "");
   const known = videoPeersById.get(peerId);
   if (known) return known;
-  let metadata = {};
-  try {
-    metadata = participant?.metadata ? JSON.parse(participant.metadata) : {};
-  } catch {
-    metadata = {};
-  }
+  const metadata = liveKitParticipantMetadata(participant);
   return {
     id: peerId,
     username: metadata.username || participant?.name || "Player",
@@ -3170,6 +3169,10 @@ function liveKitPeerForParticipant(participant) {
 
 function attachLiveKitTrack(track, participant) {
   const peerId = String(participant?.identity || "");
+  if (isLiveKitSpectatorParticipant(participant)) {
+    removePeerVideoTile(peerId);
+    return;
+  }
   if (!peerId || peerId === String(me?.id)) return;
   const peer = liveKitPeerForParticipant(participant);
   const tile = peerVideoTiles.get(peerId) || ensurePeerVideoTile(peer);
@@ -3235,6 +3238,39 @@ function attachLiveKitTrack(track, participant) {
   refreshLiveKitState(liveKitRoom);
 }
 
+function liveKitParticipantMetadata(participant) {
+  try {
+    return participant?.metadata ? JSON.parse(participant.metadata) : {};
+  } catch {
+    return {};
+  }
+}
+
+function isLiveKitSpectatorParticipant(participant) {
+  const identity = String(participant?.identity || "");
+  if (identity.startsWith("watcher:")) return true;
+  const metadata = liveKitParticipantMetadata(participant);
+  return metadata.role === "spectator" || metadata.teamColor === "spectator";
+}
+
+function removePeerVideoTile(peerId) {
+  const id = String(peerId || "");
+  if (!id) return;
+  const tile = peerVideoTiles.get(id);
+  const primaryTile = remoteVideo?.closest(".video-tile");
+  if (tile && tile !== primaryTile) tile.remove();
+  const video = peerVideoElements.get(id);
+  if (video) video.srcObject = null;
+  const audio = peerAudioElements.get(id);
+  if (audio) audio.remove();
+  peerVideoTiles.delete(id);
+  peerVideoElements.delete(id);
+  peerAudioElements.delete(id);
+  [...liveKitTrackElements.keys()]
+    .filter((key) => key.startsWith(`${id}:`))
+    .forEach((key) => liveKitTrackElements.delete(key));
+}
+
 function ensureTrackInMediaElement(element, track, kind = track?.kind) {
   if (!element || !track) return;
   const stream = element.srcObject instanceof MediaStream ? element.srcObject : new MediaStream();
@@ -3264,6 +3300,10 @@ function detachLiveKitTrack(track, participant) {
 }
 
 function clearLiveKitParticipant(peerId) {
+  if (String(peerId || "").startsWith("watcher:")) {
+    removePeerVideoTile(peerId);
+    return;
+  }
   const video = peerVideoElements.get(String(peerId));
   if (video) video.srcObject = null;
   const audio = peerAudioElements.get(String(peerId));
