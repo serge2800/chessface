@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-fast-eval-bar-v1";
+const APP_VERSION = "2026-07-12-live-eval-recovery-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -175,7 +175,18 @@ let liveEvalReadyPromise = null;
 let liveEvalCleanup = null;
 let liveEvalTimer = null;
 let liveEvalSearchId = 0;
+let liveEvalSourceIndex = 0;
 let accuracyAnalysisServicePromise = null;
+const LIVE_STOCKFISH_SOURCES = [
+  {
+    label: "Local Stockfish 18 lite",
+    create: () => createLocalStockfishWorker("stockfish-18-lite-single.js", "stockfish-18-lite-single.wasm")
+  },
+  {
+    label: "Local Stockfish 18 fallback",
+    create: () => createLocalStockfishWorker("stockfish-18-asm.js")
+  }
+];
 const DONKEY_MOODS = [
   { id: "10-losing-crushed", src: "/assets/eval/10.mov", label: "Losing badly", max: -800 },
   { id: "9-losing-horrible", src: "/assets/eval/9.mov", label: "Very bad", max: -500 },
@@ -1822,47 +1833,18 @@ function renderTeamRoster(game) {
   });
 }
 
-function createLiveStockfishWorker() {
-  const scriptUrl = new URL("/vendor/stockfish/stockfish-18-lite-single.js", location.origin);
-  const wasmUrl = new URL("/vendor/stockfish/stockfish-18-lite-single.wasm", location.origin);
-  scriptUrl.hash = `${encodeURIComponent(wasmUrl.href)},worker`;
+function createLocalStockfishWorker(scriptFile, wasmFile) {
+  const scriptUrl = new URL(`/vendor/stockfish/${scriptFile}`, location.origin);
+  if (wasmFile) {
+    const wasmUrl = new URL(`/vendor/stockfish/${wasmFile}`, location.origin);
+    scriptUrl.hash = `${encodeURIComponent(wasmUrl.href)},worker`;
+  }
   return new Worker(scriptUrl.href);
 }
 
 function ensureLiveStockfish() {
   if (liveEvalReadyPromise) return liveEvalReadyPromise;
-  liveEvalReadyPromise = new Promise((resolve, reject) => {
-    liveEvalWorker = createLiveStockfishWorker();
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Stockfish timeout"));
-    }, 12000);
-    const cleanup = () => {
-      clearTimeout(timeout);
-      liveEvalWorker?.removeEventListener("message", handleReady);
-      liveEvalWorker?.removeEventListener("error", handleError);
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error("Stockfish failed"));
-    };
-    const handleReady = (event) => {
-      const line = String(event.data || "");
-      if (line === "uciok") liveEvalWorker.postMessage("isready");
-      if (line === "readyok") {
-        cleanup();
-        liveEvalWorker.postMessage("setoption name Hash value 16");
-        liveEvalWorker.postMessage("setoption name Threads value 1");
-        liveEvalWorker.postMessage("ucinewgame");
-        resolve(liveEvalWorker);
-      }
-    };
-    liveEvalWorker.addEventListener("message", handleReady);
-    liveEvalWorker.addEventListener("error", handleError);
-    liveEvalWorker.postMessage("uci");
-  }).catch((error) => {
-    liveEvalWorker?.terminate?.();
-    liveEvalWorker = null;
+  liveEvalReadyPromise = loadLiveStockfishWorker().catch((error) => {
     liveEvalReadyPromise = null;
     if (evalBarLabel) evalBarLabel.textContent = "--";
     throw error;
@@ -1870,10 +1852,61 @@ function ensureLiveStockfish() {
   return liveEvalReadyPromise;
 }
 
+async function loadLiveStockfishWorker() {
+  const errors = [];
+  for (let offset = 0; offset < LIVE_STOCKFISH_SOURCES.length; offset += 1) {
+    const nextIndex = (liveEvalSourceIndex + offset) % LIVE_STOCKFISH_SOURCES.length;
+    const source = LIVE_STOCKFISH_SOURCES[nextIndex];
+    try {
+      liveEvalSourceIndex = nextIndex;
+      return await readyLiveStockfishWorker(source.create(), source.label);
+    } catch (error) {
+      errors.push(`${source.label}: ${error.message || String(error)}`);
+      liveEvalWorker?.terminate?.();
+      liveEvalWorker = null;
+    }
+  }
+  throw new Error(`live engine failed to load (${errors.join("; ")})`);
+}
+
+function readyLiveStockfishWorker(nextWorker, label) {
+  liveEvalWorker = nextWorker;
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`${label} timeout`));
+    }, 12000);
+    const cleanup = () => {
+      clearTimeout(timeout);
+      nextWorker.removeEventListener("message", handleReady);
+      nextWorker.removeEventListener("error", handleError);
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error(`${label} blocked`));
+    };
+    const handleReady = (event) => {
+      const line = String(event.data || "");
+      if (line === "uciok") nextWorker.postMessage("isready");
+      if (line === "readyok") {
+        cleanup();
+        nextWorker.postMessage("setoption name Hash value 16");
+        nextWorker.postMessage("setoption name Threads value 1");
+        nextWorker.postMessage("ucinewgame");
+        resolve(nextWorker);
+      }
+    };
+    nextWorker.addEventListener("message", handleReady);
+    nextWorker.addEventListener("error", handleError);
+    nextWorker.postMessage("uci");
+  });
+}
+
 function requestLiveEvaluation(fen) {
   if (!evalBarFill || !fen) return;
   clearTimeout(liveEvalTimer);
   stopLiveEvaluation();
+  if (evalBarLabel) evalBarLabel.textContent = "...";
   liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 120);
 }
 
