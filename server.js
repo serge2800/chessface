@@ -249,26 +249,28 @@ app.post("/api/livekit-token", requireSession, (req, res) => {
   if (!game || game.status !== "playing") return res.status(404).json({ error: "Game not found." });
 
   const player = gamePlayers(game).find((item) => item.id === req.user.id);
-  if (!player) return res.status(403).json({ error: "You are not in this game." });
+  const isPlayer = Boolean(player);
+  const identity = isPlayer ? String(req.user.id) : `watcher:${req.user.id}:${uuid()}`;
 
   const now = Math.floor(Date.now() / 1000);
   const room = liveKitRoomName(game);
   const token = signLiveKitJwt({
     iss: config.apiKey,
-    sub: String(req.user.id),
+    sub: identity,
     name: req.user.username,
     metadata: JSON.stringify({
       userId: req.user.id,
       username: req.user.username,
       avatarUrl: req.user.avatarUrl,
       countryCode: req.user.countryCode || "OTHER",
-      teamColor: colorForUser(game, req.user.id),
+      teamColor: isPlayer ? colorForUser(game, req.user.id) : "spectator",
+      role: isPlayer ? "player" : "spectator",
       isGuest: Boolean(req.user.isGuest)
     }),
     video: {
       room,
       roomJoin: true,
-      canPublish: true,
+      canPublish: isPlayer,
       canSubscribe: true,
       canPublishData: false,
       canUpdateOwnMetadata: false
@@ -281,7 +283,8 @@ app.post("/api/livekit-token", requireSession, (req, res) => {
     enabled: true,
     url: config.url,
     room,
-    identity: String(req.user.id),
+    identity,
+    canPublish: isPlayer,
     token
   });
 });
@@ -1064,6 +1067,26 @@ function emitWatchGame(game) {
   io.to(watchRoom(game.id)).compress(false).emit("watch:game", watchGamePayload(game));
 }
 
+function addGameChatMessage(game, user, rawText) {
+  if (!game || game.status !== "playing") return null;
+  const text = String(rawText || "").trim().slice(0, 240);
+  if (!text) return null;
+  const message = {
+    id: uuid(),
+    gameId: game.id,
+    from: user.id,
+    username: user.username,
+    text,
+    sentAt: new Date().toISOString()
+  };
+  game.spectatorChat ||= [];
+  game.spectatorChat.push(message);
+  game.spectatorChat = game.spectatorChat.slice(-120);
+  for (const player of gamePlayers(game)) io.to(player.socketId).emit("game:chat", message);
+  io.to(watchRoom(game.id)).emit("watch:chat", message);
+  return message;
+}
+
 function resetVideoHandshake(game) {
   game.videoReady = new Set();
   game.videoStartedPairs = new Set();
@@ -1232,6 +1255,7 @@ function finishGame(game, result, reason) {
   clearInterval(game.timer);
   if (game.kind === "team") {
     emitGame(game);
+    game.spectatorChat = [];
     return;
   }
   const ratingChanges = updateRatings(result, game.white.id, game.black.id);
@@ -1240,6 +1264,7 @@ function finishGame(game, result, reason) {
   game.black.rating = users.find((user) => user.id === game.black.id)?.rating || game.black.rating;
   if (ratingChanges) saveGameRecord(game, ratingChanges);
   emitGame(game);
+  game.spectatorChat = [];
 }
 
 function abortGame(game) {
@@ -1249,6 +1274,7 @@ function abortGame(game) {
   game.reason = "abort";
   clearInterval(game.timer);
   emitGame(game);
+  game.spectatorChat = [];
   return true;
 }
 
@@ -1972,20 +1998,7 @@ io.on("connection", (socket) => {
     const state = sockets.get(socket.id);
     const game = games.get(gameId || state?.watchingGameId);
     if (!state || !game || game.status !== "playing" || state.watchingGameId !== game.id) return;
-    const text = String(rawText || "").trim().slice(0, 240);
-    if (!text) return;
-    const message = {
-      id: uuid(),
-      gameId: game.id,
-      from: socket.user.id,
-      username: socket.user.username,
-      text,
-      sentAt: new Date().toISOString()
-    };
-    game.spectatorChat ||= [];
-    game.spectatorChat.push(message);
-    game.spectatorChat = game.spectatorChat.slice(-120);
-    io.to(watchRoom(game.id)).emit("watch:chat", message);
+    addGameChatMessage(game, socket.user, rawText);
   });
 
   socket.on("game:accuracy:save", ({ gameId, analysis }) => {
@@ -2268,18 +2281,7 @@ io.on("connection", (socket) => {
   socket.on("game:chat", (messageText) => {
     const game = games.get(sockets.get(socket.id)?.gameId);
     if (!game || game.status !== "playing") return;
-    const text = String(messageText || "").trim().slice(0, 240);
-    if (!text) return;
-    const message = {
-      id: uuid(),
-      gameId: game.id,
-      from: socket.user.id,
-      username: socket.user.username,
-      text,
-      sentAt: new Date().toISOString()
-    };
-    const recipients = gamePlayers(game);
-    for (const player of recipients) io.to(player.socketId).emit("game:chat", message);
+    addGameChatMessage(game, socket.user, messageText);
   });
 
   socket.on("video:request", () => {

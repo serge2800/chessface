@@ -5610,6 +5610,52 @@ body[data-board-theme="wood"] {
   margin-top: 14px;
 }
 
+.watch-video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.watch-video-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(88, 212, 191, 0.12), transparent 34%),
+    rgba(0, 0, 0, 0.52);
+}
+
+.watch-video-tile video {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  display: block;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.watch-video-tile span {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.64);
+  color: var(--ink);
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-chat-panel {
+  margin-top: 12px;
+}
+
 .watch-game-card {
   width: 100%;
   display: grid;

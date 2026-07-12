@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-open-ack-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-video-chat-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -61,12 +61,38 @@
             <span id="watchMoveStatus">No game selected</span>
             <span id="watchSpectatorCount">0 watching</span>
           </div>
+          <div class="watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
+            <div class="watch-video-tile" data-watch-video="white">
+              <video id="watchWhiteVideo" autoplay playsinline muted></video>
+              <span id="watchWhiteVideoLabel">White camera</span>
+            </div>
+            <div class="watch-video-tile" data-watch-video="black">
+              <video id="watchBlackVideo" autoplay playsinline muted></video>
+              <span id="watchBlackVideoLabel">Black camera</span>
+            </div>
+          </div>
+          <section class="game-chat watch-chat-panel" aria-label="Watcher chat">
+            <div class="game-chat-head">
+              <div>
+                <p class="eyebrow">Live chat</p>
+                <h3>Players and watchers</h3>
+              </div>
+              <span id="watchChatStatus">Live</span>
+            </div>
+            <div class="game-chat-messages" id="watchChatMessages" aria-live="polite">
+              <p class="chat-empty">Open a game to join the conversation.</p>
+            </div>
+            <form class="game-chat-form" id="watchChatForm">
+              <input id="watchChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." />
+              <button type="submit">Send</button>
+            </form>
+          </section>
         </section>
       </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-12-watch-open-ack-v1"></script>
+    <script src="watch.js?v=2026-07-12-watch-video-chat-v1"></script>
   </body>
 </html>

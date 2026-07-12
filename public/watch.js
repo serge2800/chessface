@@ -6,16 +6,29 @@ const watchWhitePlayer = document.querySelector("#watchWhitePlayer");
 const watchBlackPlayer = document.querySelector("#watchBlackPlayer");
 const watchMoveStatus = document.querySelector("#watchMoveStatus");
 const watchSpectatorCount = document.querySelector("#watchSpectatorCount");
+const watchWhiteVideo = document.querySelector("#watchWhiteVideo");
+const watchBlackVideo = document.querySelector("#watchBlackVideo");
+const watchWhiteVideoLabel = document.querySelector("#watchWhiteVideoLabel");
+const watchBlackVideoLabel = document.querySelector("#watchBlackVideoLabel");
+const watchChatForm = document.querySelector("#watchChatForm");
+const watchChatInput = document.querySelector("#watchChatInput");
+const watchChatMessages = document.querySelector("#watchChatMessages");
+const watchChatStatus = document.querySelector("#watchChatStatus");
 const watchProfileLink = document.querySelector("#watchProfileLink");
 const watchLogoutButton = document.querySelector("#watchLogoutButton");
 const watchLoginLink = document.querySelector("#watchLoginLink");
 const refreshWatchButton = document.querySelector("#refreshWatchButton");
 
+const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const token = localStorage.getItem("chessface:token");
 let socket = null;
 let liveGames = [];
 let selectedGame = null;
 let watchNotice = "";
+let watchChat = [];
+let liveKitModulePromise = null;
+let watchLiveKitRoom = null;
+let watchLiveKitTracks = new Map();
 
 renderNavigation();
 
@@ -26,6 +39,13 @@ watchLogoutButton?.addEventListener("click", () => {
 });
 
 refreshWatchButton?.addEventListener("click", () => socket?.emit("watch:list"));
+watchChatForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = watchChatInput.value.trim();
+  if (!text || !selectedGame?.id || selectedGame.status !== "playing") return;
+  socket?.emit("watch:chat", { gameId: selectedGame.id, text });
+  watchChatInput.value = "";
+});
 watchGamesList?.addEventListener("click", (event) => {
   const row = event.target instanceof Element ? event.target.closest("[data-game-id]") : null;
   if (!row || !watchGamesList.contains(row)) return;
@@ -67,6 +87,17 @@ function connectSocket() {
     selectedGame = game;
     renderSelectedGame();
     renderGameTable();
+    startWatchLiveKit(game);
+  });
+  socket.on("watch:chat:history", ({ gameId, messages = [] } = {}) => {
+    if (!selectedGame || gameId !== selectedGame.id) return;
+    watchChat = messages.slice(-80);
+    renderWatchChat();
+  });
+  socket.on("watch:chat", addWatchChatMessage);
+  socket.on("disconnect", () => {
+    closeWatchLiveKit();
+    renderWatchVideoStatus("Camera connection closed");
   });
 }
 
@@ -155,6 +186,7 @@ function joinGame(gameId) {
       return;
     }
     selectedGame = response.game;
+    watchChat = [];
     renderSelectedGame();
     renderGameTable();
   });
@@ -163,9 +195,13 @@ function joinGame(gameId) {
 function renderSelectedGame() {
   watchDetailSection?.classList.toggle("hidden", !selectedGame);
   if (!selectedGame) {
+    closeWatchLiveKit();
     renderEmptyBoard();
     watchMoveStatus.textContent = "No game selected";
     watchSpectatorCount.textContent = "0 watching";
+    watchChat = [];
+    renderWatchChatState();
+    renderWatchChat();
     return;
   }
   const white = selectedGame.players?.white || [];
@@ -187,11 +223,277 @@ function renderSelectedGame() {
     : "Game finished";
   watchSpectatorCount.textContent = `${selectedGame.spectatorCount || 0} watching`;
   watchDetailSection?.scrollIntoView({ block: "start", behavior: "smooth" });
+  renderWatchChatState();
+  renderWatchChat();
+  renderWatchVideoPlaceholders();
 }
 
 function showWatchNotice(message) {
   watchNotice = message;
   renderGameTable();
+}
+
+function addWatchChatMessage(message) {
+  if (!selectedGame || message.gameId !== selectedGame.id) return;
+  watchChat.push(message);
+  watchChat = watchChat.slice(-80);
+  renderWatchChat();
+}
+
+function renderWatchChatState() {
+  const live = selectedGame?.status === "playing";
+  if (watchChatStatus) watchChatStatus.textContent = live ? "Live" : "Closed";
+  if (watchChatInput) watchChatInput.disabled = !live;
+  const button = watchChatForm?.querySelector("button[type='submit']");
+  if (button) button.disabled = !live;
+}
+
+function renderWatchChat() {
+  if (!watchChatMessages) return;
+  watchChatMessages.innerHTML = "";
+  if (!watchChat.length) {
+    const empty = document.createElement("p");
+    empty.className = "chat-empty";
+    empty.textContent = selectedGame ? "Say hi to the players and other watchers." : "Open a game to join the conversation.";
+    watchChatMessages.append(empty);
+    return;
+  }
+  watchChat.forEach((message) => {
+    const row = document.createElement("div");
+    const isMine = message.from && getCurrentUserId() === String(message.from);
+    row.className = `chat-message ${isMine ? "mine" : "theirs"}`;
+    const name = document.createElement("strong");
+    name.textContent = isMine ? "You" : message.username || "Watcher";
+    const text = document.createElement("span");
+    text.textContent = message.text || "";
+    row.append(name, text);
+    watchChatMessages.append(row);
+  });
+  watchChatMessages.scrollTop = watchChatMessages.scrollHeight;
+}
+
+function getCurrentUserId() {
+  try {
+    return String(JSON.parse(localStorage.getItem("chessface:user") || "null")?.id || "");
+  } catch {
+    return "";
+  }
+}
+
+function renderWatchVideoPlaceholders() {
+  const white = firstPlayer(selectedGame?.players?.white);
+  const black = firstPlayer(selectedGame?.players?.black);
+  if (watchWhiteVideoLabel) watchWhiteVideoLabel.textContent = `${white.username} · white`;
+  if (watchBlackVideoLabel) watchBlackVideoLabel.textContent = `${black.username} · black`;
+}
+
+function renderWatchVideoStatus(message) {
+  if (watchWhiteVideoLabel) watchWhiteVideoLabel.textContent = message;
+  if (watchBlackVideoLabel) watchBlackVideoLabel.textContent = message;
+}
+
+function loadLiveKitClient() {
+  liveKitModulePromise ||= import(LIVEKIT_CLIENT_URL);
+  return liveKitModulePromise;
+}
+
+async function startWatchLiveKit(game) {
+  if (!game?.id || game.status !== "playing" || !token) return;
+  closeWatchLiveKit();
+  renderWatchVideoPlaceholders();
+  try {
+    const response = await fetch("/api/livekit-token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ gameId: game.id })
+    });
+    const session = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(session.error || "Camera room unavailable.");
+    if (!session.enabled) {
+      renderWatchVideoStatus("Cameras unavailable");
+      return;
+    }
+    const LiveKit = await loadLiveKitClient();
+    const room = new LiveKit.Room({
+      adaptiveStream: true,
+      dynacast: true,
+      disconnectOnPageLeave: false
+    });
+    wireWatchLiveKitRoom(room, LiveKit);
+    watchLiveKitRoom = room;
+    await room.connect(session.url, session.token, { autoSubscribe: true });
+    syncWatchLiveKitParticipants(room);
+  } catch (error) {
+    console.warn("[ChessFace] Watch cameras unavailable:", error);
+    renderWatchVideoStatus("Cameras unavailable");
+  }
+}
+
+function wireWatchLiveKitRoom(room, LiveKit) {
+  const RoomEvent = LiveKit.RoomEvent || {};
+  room.on(RoomEvent.TrackSubscribed || "trackSubscribed", (track, _publication, participant) => {
+    attachWatchLiveKitTrack(track, participant);
+  });
+  room.on(RoomEvent.TrackPublished || "trackPublished", (publication, participant) => {
+    subscribeWatchPublication(publication, participant);
+  });
+  room.on(RoomEvent.ParticipantConnected || "participantConnected", (participant) => {
+    syncWatchParticipant(participant);
+  });
+  room.on(RoomEvent.TrackUnsubscribed || "trackUnsubscribed", (track, _publication, participant) => {
+    detachWatchLiveKitTrack(track, participant);
+  });
+  room.on(RoomEvent.ParticipantDisconnected || "participantDisconnected", (participant) => {
+    clearWatchParticipant(participant);
+  });
+  room.on(RoomEvent.Disconnected || "disconnected", () => {
+    watchLiveKitTracks.clear();
+    [watchWhiteVideo, watchBlackVideo].forEach((video) => {
+      if (video) video.srcObject = null;
+    });
+  });
+}
+
+function syncWatchLiveKitParticipants(room) {
+  liveKitRemoteParticipants(room).forEach(syncWatchParticipant);
+}
+
+function syncWatchParticipant(participant) {
+  for (const publication of liveKitPublications(participant)) {
+    subscribeWatchPublication(publication, participant);
+    if (publication?.track && (publication.isSubscribed ?? true)) attachWatchLiveKitTrack(publication.track, participant);
+  }
+}
+
+function subscribeWatchPublication(publication, participant) {
+  if (!publication) return;
+  if (typeof publication.setEnabled === "function") {
+    try {
+      publication.setEnabled(true);
+    } catch {
+      // Older LiveKit publication objects may not support this.
+    }
+  }
+  if (publication.track && (publication.isSubscribed ?? true)) {
+    attachWatchLiveKitTrack(publication.track, participant);
+    return;
+  }
+  if (typeof publication.setSubscribed !== "function") return;
+  try {
+    const result = publication.setSubscribed(true);
+    if (result?.then) {
+      result.then(() => {
+        if (publication.track) attachWatchLiveKitTrack(publication.track, participant);
+      }).catch(() => {});
+    } else if (publication.track) {
+      attachWatchLiveKitTrack(publication.track, participant);
+    }
+  } catch {
+    // Keep the board and chat alive even if a camera subscription fails.
+  }
+}
+
+function attachWatchLiveKitTrack(track, participant) {
+  const kind = liveKitTrackKind(track);
+  if (kind !== "video") return;
+  const side = watchSideForParticipant(participant);
+  const video = side === "black" ? watchBlackVideo : side === "white" ? watchWhiteVideo : null;
+  if (!video) return;
+  const mediaTrack = track.mediaStreamTrack;
+  if (mediaTrack) {
+    const stream = video.srcObject instanceof MediaStream ? video.srcObject : new MediaStream();
+    stream.getVideoTracks().filter((item) => item !== mediaTrack).forEach((item) => stream.removeTrack(item));
+    if (!stream.getTracks().includes(mediaTrack)) stream.addTrack(mediaTrack);
+    video.srcObject = stream;
+    watchLiveKitTracks.set(`${participant.identity}:video`, { element: video, track: mediaTrack });
+  } else if (typeof track.attach === "function") {
+    const element = track.attach(video);
+    if (element && element !== video && element.srcObject) video.srcObject = element.srcObject;
+    watchLiveKitTracks.set(`${participant.identity}:video`, { element: video, track });
+  }
+  video.muted = true;
+  video.volume = 0;
+  video.play?.().catch(() => {});
+}
+
+function detachWatchLiveKitTrack(track, participant) {
+  const side = watchSideForParticipant(participant);
+  const video = side === "black" ? watchBlackVideo : side === "white" ? watchWhiteVideo : null;
+  const mediaTrack = track?.mediaStreamTrack;
+  if (video?.srcObject instanceof MediaStream && mediaTrack) {
+    video.srcObject.removeTrack(mediaTrack);
+    if (!video.srcObject.getTracks().length) video.srcObject = null;
+  }
+  watchLiveKitTracks.delete(`${participant?.identity}:video`);
+}
+
+function clearWatchParticipant(participant) {
+  const side = watchSideForParticipant(participant);
+  const video = side === "black" ? watchBlackVideo : side === "white" ? watchWhiteVideo : null;
+  if (video) video.srcObject = null;
+  [...watchLiveKitTracks.keys()]
+    .filter((key) => key.startsWith(`${participant?.identity}:`))
+    .forEach((key) => watchLiveKitTracks.delete(key));
+}
+
+function watchSideForParticipant(participant) {
+  const identity = String(participant?.identity || "");
+  if (!identity || identity.startsWith("watcher:")) return "";
+  if (selectedGame?.players?.white?.some((player) => String(player.id) === identity)) return "white";
+  if (selectedGame?.players?.black?.some((player) => String(player.id) === identity)) return "black";
+  const metadata = parseParticipantMetadata(participant);
+  return metadata.teamColor === "white" || metadata.teamColor === "black" ? metadata.teamColor : "";
+}
+
+function parseParticipantMetadata(participant) {
+  try {
+    return participant?.metadata ? JSON.parse(participant.metadata) : {};
+  } catch {
+    return {};
+  }
+}
+
+function liveKitRemoteParticipants(room = watchLiveKitRoom) {
+  if (!room) return [];
+  const remote = room.remoteParticipants;
+  if (remote instanceof Map) return [...remote.values()];
+  return Object.values(remote || {});
+}
+
+function liveKitPublications(participant) {
+  if (!participant) return [];
+  if (typeof participant.getTrackPublications === "function") return participant.getTrackPublications();
+  const maps = [participant.trackPublications, participant.videoTrackPublications, participant.audioTrackPublications].filter(Boolean);
+  return maps.flatMap((items) => items instanceof Map ? [...items.values()] : Object.values(items));
+}
+
+function liveKitTrackKind(track) {
+  const source = String(track?.source || "").toLowerCase();
+  const kind = String(track?.kind || track?.mediaStreamTrack?.kind || "").toLowerCase();
+  if (kind === "video" || source === "camera") return "video";
+  if (kind === "audio" || source === "microphone") return "audio";
+  return kind || source || "";
+}
+
+function closeWatchLiveKit() {
+  if (!watchLiveKitRoom) return;
+  try {
+    watchLiveKitRoom.disconnect(false);
+  } catch {
+    try {
+      watchLiveKitRoom.disconnect();
+    } catch {
+      // Already disconnected.
+    }
+  }
+  watchLiveKitRoom = null;
+  watchLiveKitTracks.clear();
+  [watchWhiteVideo, watchBlackVideo].forEach((video) => {
+    if (video) video.srcObject = null;
+  });
 }
 
 function renderWatchPlayer(container, players, clock) {
