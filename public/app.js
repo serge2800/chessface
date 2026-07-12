@@ -157,7 +157,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-time-trouble-v1";
+const APP_VERSION = "2026-07-13-match-intro-sword-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -1077,6 +1077,7 @@ function showMatchIntro(game) {
   lobby.classList.add("hidden");
   seekingPanel.classList.add("hidden");
   matchIntro.classList.remove("hidden");
+  playMatchIntroSound();
   return new Promise((resolve) => window.setTimeout(resolve, MATCH_INTRO_MS));
 }
 
@@ -3918,6 +3919,46 @@ function playHeartbeatSound(intensity = 0.8) {
     beat.start(start);
     beat.stop(start + 0.13);
   });
+}
+
+function playMatchIntroSound() {
+  if (!settings.moveSound) return;
+  const context = getAudioContext();
+  if (context.state === "suspended") context.resume();
+  const now = context.currentTime;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.38, now + 0.018);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.86);
+  master.connect(context.destination);
+
+  [0, 0.055].forEach((offset, index) => {
+    const scrape = context.createOscillator();
+    scrape.type = index === 0 ? "sawtooth" : "triangle";
+    const scrapeGain = context.createGain();
+    const start = now + offset;
+    scrape.frequency.setValueAtTime(index === 0 ? 1180 : 1720, start);
+    scrape.frequency.exponentialRampToValueAtTime(index === 0 ? 3520 : 4120, start + 0.23);
+    scrapeGain.gain.setValueAtTime(0.0001, start);
+    scrapeGain.gain.exponentialRampToValueAtTime(index === 0 ? 0.42 : 0.24, start + 0.018);
+    scrapeGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+    scrape.connect(scrapeGain).connect(master);
+    scrape.start(start);
+    scrape.stop(start + 0.36);
+  });
+
+  const clash = context.createOscillator();
+  clash.type = "square";
+  const clashGain = context.createGain();
+  const clashAt = now + 0.34;
+  clash.frequency.setValueAtTime(240, clashAt);
+  clash.frequency.exponentialRampToValueAtTime(82, clashAt + 0.18);
+  clashGain.gain.setValueAtTime(0.0001, clashAt);
+  clashGain.gain.exponentialRampToValueAtTime(0.55, clashAt + 0.012);
+  clashGain.gain.exponentialRampToValueAtTime(0.0001, clashAt + 0.24);
+  clash.connect(clashGain).connect(master);
+  clash.start(clashAt);
+  clash.stop(clashAt + 0.26);
 }
 
 function sendSignal(peerId, signal) {
