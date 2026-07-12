@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-session-recovery-v1";
+const APP_VERSION = "2026-07-12-copy-url-only-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1332,9 +1332,14 @@ function showResultSharePanel() {
 async function copyResultShareText({ social = false } = {}) {
   const text = resultShareText();
   const url = resultShareUrl();
+  if (!social) {
+    await copyToClipboard(url);
+    showNotice("Result link copied.");
+    return;
+  }
   const suffix = social ? "\n\nPaste this into your Instagram post, story, or DM." : "";
   await copyToClipboard(`${text}\n${url}${suffix}`);
-  showNotice(social ? "Result copied for Instagram." : "Result link copied.");
+  showNotice("Result copied for Instagram.");
 }
 
 async function copyToClipboard(text) {
