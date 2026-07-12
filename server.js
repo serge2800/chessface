@@ -950,7 +950,7 @@ function videoPeerPayload(game, viewerId, player) {
 
 function emitGame(game) {
   for (const player of gamePlayers(game)) {
-    const liveSocket = socketForUser(player.id);
+    const liveSocket = socketForGamePlayer(game, player);
     io.to(liveSocket?.id || player.socketId).emit("game:update", gamePayload(game, player.id));
   }
 }
@@ -1246,6 +1246,21 @@ function createTeamGame(players, timeKey) {
 function socketForUser(userId) {
   const entry = [...sockets.entries()].find(([, state]) => state.userId === userId);
   return entry ? io.sockets.sockets.get(entry[0]) : null;
+}
+
+function socketsForUser(userId) {
+  return [...sockets.entries()]
+    .filter(([, state]) => state.userId === userId)
+    .map(([socketId]) => io.sockets.sockets.get(socketId))
+    .filter(Boolean);
+}
+
+function socketForGamePlayer(game, player) {
+  const gameSocket = io.sockets.sockets.get(player.socketId);
+  const gameState = sockets.get(player.socketId);
+  if (gameSocket && gameState?.userId === player.id) return gameSocket;
+  const activeEntry = [...sockets.entries()].find(([, state]) => state.userId === player.id && state.gameId === game.id);
+  return activeEntry ? io.sockets.sockets.get(activeEntry[0]) : socketForUser(player.id);
 }
 
 app.post("/api/signup", upload.single("avatar"), async (req, res) => {
@@ -1817,19 +1832,18 @@ io.on("connection", (socket) => {
       if (alreadyRequested) return;
       for (const player of gamePlayers(game)) {
         if (player.id === socket.user.id || game.rematchRequests.has(player.id)) continue;
-        const liveSocket = socketForUser(player.id);
-        if (!liveSocket) continue;
-        liveSocket.emit("rematch:requested", {
+        const requestPayload = {
           gameId: game.id,
           from: { id: socket.user.id, username: socket.user.username },
           timeControl: game.timeControl
-        });
+        };
+        for (const liveSocket of socketsForUser(player.id)) liveSocket.emit("rematch:requested", requestPayload);
       }
       return;
     }
 
-    const whiteSocket = socketForUser(game.white.id);
-    const blackSocket = socketForUser(game.black.id);
+    const whiteSocket = socket.user.id === game.white.id ? socket : socketForGamePlayer(game, game.white);
+    const blackSocket = socket.user.id === game.black.id ? socket : socketForGamePlayer(game, game.black);
     if (!whiteSocket || !blackSocket) {
       return socket.emit("error:message", "Your opponent is no longer online.");
     }
