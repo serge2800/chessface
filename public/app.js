@@ -31,6 +31,11 @@ const seekingTitle = document.querySelector("#seekingTitle");
 const cancelSeekPanelButton = document.querySelector("#cancelSeekPanelButton");
 const matchmakingImage = document.querySelector("#matchmakingImage");
 const matchmakingCaption = document.querySelector("#matchmakingCaption");
+const matchIntro = document.querySelector("#matchIntro");
+const matchIntroTitle = document.querySelector("#matchIntroTitle");
+const matchIntroYou = document.querySelector("#matchIntroYou");
+const matchIntroOpponent = document.querySelector("#matchIntroOpponent");
+const matchIntroLine = document.querySelector("#matchIntroLine");
 const gameLayout = document.querySelector("#gameLayout");
 const board = document.querySelector("#board");
 const evalBarFill = document.querySelector("#evalBarFill");
@@ -152,13 +157,23 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-face-zoom-thinking-v1";
+const APP_VERSION = "2026-07-13-match-intro-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
 const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
 const THINKING_DELAY_MS = 20000;
+const MATCH_INTRO_MS = 1450;
+const MATCH_INTRO_LINES = [
+  "Cameras on. Pride optional.",
+  "Two faces enter. One rating survives.",
+  "Smile now. Blunders are forever.",
+  "The board is warming up.",
+  "Opponent found. Try to look confident.",
+  "Opening theory loading... probably.",
+  "Handshake skipped. Chaos accepted."
+];
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
   height: { ideal: VIDEO_OUTPUT_HEIGHT, max: 360 },
@@ -821,7 +836,7 @@ function connectSocket() {
     challengeBox.classList.remove("hidden");
   });
   socket.on("rematch:requested", showRematchRequest);
-  socket.on("match:found", enterGame);
+  socket.on("match:found", (game) => enterGame(game, { intro: true }));
   socket.on("active-game:found", async (game) => {
     showNotice("Active game restored.");
     await enterGame(game);
@@ -866,7 +881,7 @@ function handleSocketConnectError(error) {
   showNotice(message || "Connection interrupted.");
 }
 
-async function enterGame(game) {
+async function enterGame(game, { intro = false } = {}) {
   clearPostGameVideoTimer();
   resetIncomingGameBoardState();
   gameResultModal?.classList.add("hidden");
@@ -882,11 +897,14 @@ async function enterGame(game) {
   lobby.classList.add("hidden");
   friendChallengePanel.classList.add("hidden");
   challengeBox.classList.add("hidden");
-  gameLayout.classList.remove("hidden");
+  gameLayout.classList.add("hidden");
+  if (intro) await showMatchIntro(game);
   scheduleDonkeyVideoWarmup();
   seekButton.disabled = false;
   seekTeamButton.disabled = false;
   cancelSeekButton.classList.add("hidden");
+  hideMatchIntro();
+  gameLayout.classList.remove("hidden");
   renderGame(game);
   updateDonkeyMoods(0);
   scrollGameIntoViewOnStart();
@@ -1038,6 +1056,7 @@ function renderOpenChallenges() {
 
 function showSeeking(timeControl) {
   seekingTitle.textContent = `Searching for a ${timeControl} match`;
+  hideMatchIntro();
   lobby.classList.add("hidden");
   seekingPanel.classList.remove("hidden");
   gameLayout.classList.add("hidden");
@@ -1048,6 +1067,26 @@ function hideSeeking() {
   stopMatchmakingRotation();
   seekingPanel.classList.add("hidden");
   if (!currentGame) lobby.classList.remove("hidden");
+}
+
+function showMatchIntro(game) {
+  if (!matchIntro) return Promise.resolve();
+  const myColor = game.color === "black" ? "black" : "white";
+  const opponentColor = myColor === "white" ? "black" : "white";
+  const meName = game.players?.[myColor]?.username || "You";
+  const opponentName = game.players?.[opponentColor]?.username || "Opponent";
+  if (matchIntroTitle) matchIntroTitle.textContent = `${game.timeControl || "Live"} match`;
+  if (matchIntroYou) matchIntroYou.textContent = `${flagEmoji(game.players?.[myColor]?.countryCode)} ${meName}`;
+  if (matchIntroOpponent) matchIntroOpponent.textContent = `${flagEmoji(game.players?.[opponentColor]?.countryCode)} ${opponentName}`;
+  if (matchIntroLine) matchIntroLine.textContent = MATCH_INTRO_LINES[Math.floor(Math.random() * MATCH_INTRO_LINES.length)];
+  lobby.classList.add("hidden");
+  seekingPanel.classList.add("hidden");
+  matchIntro.classList.remove("hidden");
+  return new Promise((resolve) => window.setTimeout(resolve, MATCH_INTRO_MS));
+}
+
+function hideMatchIntro() {
+  matchIntro?.classList.add("hidden");
 }
 
 function leaveQueue() {
@@ -4229,6 +4268,7 @@ function resetToLobby() {
   pendingRematchGameId = null;
   renderGameChat();
   selectedSquare = null;
+  hideMatchIntro();
   gameLayout.classList.add("hidden");
   lobby.classList.remove("hidden");
   statusTitle.textContent = "Choose a time control";
@@ -4248,6 +4288,7 @@ function logout() {
   rematchRequestModal?.classList.add("hidden");
   pendingRematchGameId = null;
   renderGameChat();
+  hideMatchIntro();
   appView.classList.add("hidden");
   authView.classList.remove("hidden");
   authForm.reset();
