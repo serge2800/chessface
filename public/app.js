@@ -152,10 +152,13 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-donkey-double-buffer-v1";
+const APP_VERSION = "2026-07-13-face-zoom-thinking-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
+const BAD_BLUNDER_CP_DROP = 350;
+const FACE_ZOOM_MS = 1000;
+const THINKING_DELAY_MS = 20000;
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
   height: { ideal: VIDEO_OUTPUT_HEIGHT, max: 360 },
@@ -183,6 +186,10 @@ let liveEvalTimer = null;
 let liveEvalSearchId = 0;
 let liveEvalSourceIndex = 0;
 let accuracyAnalysisServicePromise = null;
+let lastFaceZoomEval = null;
+let lastFaceZoomMoveKey = "";
+let thinkingTurnKey = "";
+let thinkingTurnStartedAt = 0;
 const LIVE_STOCKFISH_SOURCES = [
   {
     label: "Local Stockfish 18 lite",
@@ -1151,7 +1158,14 @@ function handleBoardHistoryKeydown(event) {
 
 function renderGame(game) {
   const previousGameId = currentGame?.id;
-  if (previousGameId && previousGameId !== game.id) boardHistoryIndex = null;
+  if (previousGameId && previousGameId !== game.id) {
+    boardHistoryIndex = null;
+    lastFaceZoomEval = null;
+    lastFaceZoomMoveKey = "";
+    clearThinkingCues();
+    thinkingTurnKey = "";
+    thinkingTurnStartedAt = 0;
+  }
   const previousFen = currentGame?.fen;
   const previousDisplayedFen = currentGame ? displayedFenForGame(currentGame) : null;
   const previousColor = currentGame?.color;
@@ -1199,6 +1213,7 @@ function renderGame(game) {
   updateTurnRandomSoundButton(game, myTurn);
   updateTakebackControls(game, myTurn);
   updateTurnStatusButton(game, myTurn);
+  updateThinkingCue(game);
   document.querySelector("#resignButton").disabled = !myTurn;
   document.querySelector("#resignButton").title = myTurn ? "" : "Only the player whose turn it is can resign.";
   const addOpponentButton = document.querySelector("#addOpponentButton");
@@ -1602,6 +1617,51 @@ function updateTurnStatusButton(game, myTurn) {
   turnStatusButton.classList.toggle("is-your-turn", Boolean(visible && myTurn));
   turnStatusButton.classList.toggle("is-beg-now", Boolean(visible && shouldBegNow));
   turnStatusButton.textContent = shouldBegNow ? "BEG NOW" : myTurn ? "Your Turn" : opponentTurnLabel(game);
+}
+
+function updateThinkingCue(game) {
+  const turnKey = game?.status === "playing" ? `${game.id}:${game.moveCount || 0}:${game.turn}` : "";
+  if (!turnKey) {
+    clearThinkingCues();
+    thinkingTurnKey = "";
+    thinkingTurnStartedAt = 0;
+    return;
+  }
+  if (turnKey !== thinkingTurnKey) {
+    clearThinkingCues();
+    thinkingTurnKey = turnKey;
+    thinkingTurnStartedAt = Date.now();
+    return;
+  }
+  const elapsed = Date.now() - thinkingTurnStartedAt;
+  if (elapsed < THINKING_DELAY_MS) {
+    clearThinkingCues();
+    return;
+  }
+  showThinkingCueForColor(game.turn, elapsed);
+}
+
+function showThinkingCueForColor(color, elapsed) {
+  const card = document.querySelector(`.board-player-${boardPositionForColor(color)}`);
+  if (!card) return;
+  document.querySelectorAll(".thinking-cue").forEach((cue) => {
+    if (!card.contains(cue)) cue.remove();
+  });
+  let cue = card.querySelector(".thinking-cue");
+  if (!cue) {
+    cue = document.createElement("span");
+    cue.className = "thinking-cue";
+    card.append(cue);
+  }
+  cue.textContent = Math.floor(elapsed / 5000) % 2 === 0 ? "🧠 Thinking..." : "☕ Cooking...";
+}
+
+function clearThinkingCues() {
+  document.querySelectorAll(".thinking-cue").forEach((cue) => cue.remove());
+}
+
+function boardPositionForColor(color) {
+  return document.querySelector(".board-player-bottom")?.dataset.color === color ? "bottom" : "top";
 }
 
 function shouldShowBegNowTurnPrompt(game) {
@@ -2042,7 +2102,10 @@ function updateEvalBar(score, fen, { updateMoods = true } = {}) {
   const whiteHeight = Math.max(6, Math.min(94, 50 + Math.tanh(whiteCentipawns / 600) * 44));
   evalBarFill.style.height = `${whiteHeight}%`;
   if (evalBarLabel) evalBarLabel.textContent = formatEvalScore(score, fen);
-  if (updateMoods) updateDonkeyMoods(whiteCentipawns);
+  if (updateMoods) {
+    updateDonkeyMoods(whiteCentipawns);
+    maybeTriggerFaceZoom(whiteCentipawns, fen);
+  }
 }
 
 function updateDonkeyMoods(whiteCentipawns) {
@@ -2050,6 +2113,44 @@ function updateDonkeyMoods(whiteCentipawns) {
   const bottomColor = document.querySelector(".board-player-bottom")?.dataset.color || "white";
   setDonkeyMood(topDonkeyMood, donkeyMoodForColor(topColor, whiteCentipawns));
   setDonkeyMood(bottomDonkeyMood, donkeyMoodForColor(bottomColor, whiteCentipawns));
+}
+
+function maybeTriggerFaceZoom(whiteCentipawns, fen) {
+  if (!currentGame || currentGame.status !== "playing" || currentGame.kind !== "normal") {
+    lastFaceZoomEval = null;
+    lastFaceZoomMoveKey = "";
+    return;
+  }
+  if (fen !== currentGame.fen || isViewingHistoricalPosition()) return;
+  const moveKey = `${currentGame.id}:${currentGame.moveCount || 0}`;
+  const previous = lastFaceZoomEval;
+  if (previous?.fen && previous.fen !== fen && previous.moveKey !== moveKey && currentGame.moveCount > 0) {
+    const sideToMove = String(fen || "").split(" ")[1] || "w";
+    const moverColor = sideToMove === "b" ? "white" : "black";
+    const moverDrop = moverColor === "white"
+      ? previous.whiteCentipawns - whiteCentipawns
+      : whiteCentipawns - previous.whiteCentipawns;
+    if (moverDrop >= BAD_BLUNDER_CP_DROP && lastFaceZoomMoveKey !== moveKey) {
+      lastFaceZoomMoveKey = moveKey;
+      triggerFaceZoomForColor(moverColor);
+    }
+  }
+  lastFaceZoomEval = { fen, whiteCentipawns, moveKey };
+}
+
+function triggerFaceZoomForColor(color) {
+  const tile = videoTileForColor(color);
+  if (!tile) return;
+  tile.classList.remove("face-zoom");
+  void tile.offsetWidth;
+  tile.classList.add("face-zoom");
+  window.setTimeout(() => tile.classList.remove("face-zoom"), FACE_ZOOM_MS);
+}
+
+function videoTileForColor(color) {
+  if (!currentGame || currentGame.kind !== "normal") return null;
+  if (color === currentGame.color) return localVideo?.closest(".video-tile") || null;
+  return remoteVideo?.closest(".video-tile") || null;
 }
 
 function donkeyMoodForColor(color, whiteCentipawns) {
