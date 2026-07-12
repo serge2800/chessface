@@ -266,11 +266,11 @@
                 <button type="button" class="accept-beg-takeback-button hidden" id="acceptBegTakebackButton" disabled>Accept request</button>
                 <div class="board-animation-slots" aria-label="Evaluation animation slots">
                   <div class="board-animation-slot board-animation-slot-top">
-                    <video id="topDonkeyMood" class="eval-donkey-video" src="/assets/eval/5.mov" muted autoplay loop playsinline preload="metadata" aria-label="Top player evaluation animation"></video>
+                    <video id="topDonkeyMood" class="eval-donkey-video" src="/assets/eval/5.mov" muted autoplay loop playsinline preload="auto" aria-label="Top player evaluation animation"></video>
                   </div>
                   <div class="board-animation-slot board-animation-slot-middle" aria-hidden="true"></div>
                   <div class="board-animation-slot board-animation-slot-bottom">
-                    <video id="bottomDonkeyMood" class="eval-donkey-video" src="/assets/eval/5.mov" muted autoplay loop playsinline preload="metadata" aria-label="Bottom player evaluation animation"></video>
+                    <video id="bottomDonkeyMood" class="eval-donkey-video" src="/assets/eval/5.mov" muted autoplay loop playsinline preload="auto" aria-label="Bottom player evaluation animation"></video>
                   </div>
                 </div>
               </div>
@@ -360,7 +360,7 @@
           <div class="accuracy-analysis hidden" id="accuracyAnalysisPanel"></div>
           <div class="game-result-actions">
             <button type="button" class="ghost" id="gameResultAnalysisButton">View Move Analysis</button>
-            <button type="button" class="primary" id="gameResultRematchButton">Play Again</button>
+            <button type="button" class="primary" id="gameResultRematchButton">Rematch</button>
             <button type="button" class="ghost" id="gameResultShareButton">Share Result</button>
             <button type="button" class="danger hidden" id="gameResultEndCallButton">End game and call</button>
             <button type="button" class="ghost hidden" id="gameResultContinueVideoButton">Continue video for 2 minutes</button>
@@ -371,11 +371,10 @@
               <button type="button" id="copyResultLinkButton">Copy Link</button>
             </div>
             <div class="result-share-actions">
-              <button type="button" id="nativeShareResultButton">Share</button>
-              <button type="button" id="facebookShareResultButton">Facebook</button>
-              <button type="button" id="whatsappShareResultButton">WhatsApp</button>
-              <button type="button" id="xShareResultButton">X</button>
-              <button type="button" id="copySocialResultButton">Instagram / TikTok</button>
+              <button type="button" id="facebookShareResultButton" aria-label="Share on Facebook"><span class="share-icon facebook">f</span><span>Facebook</span></button>
+              <button type="button" id="whatsappShareResultButton" aria-label="Share on WhatsApp"><span class="share-icon whatsapp">W</span><span>WhatsApp</span></button>
+              <button type="button" id="xShareResultButton" aria-label="Share on X"><span class="share-icon x">X</span><span>X</span></button>
+              <button type="button" id="copySocialResultButton" aria-label="Copy for Instagram"><span class="share-icon instagram">◎</span><span>Instagram</span></button>
             </div>
           </div>
         </div>

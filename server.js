@@ -786,7 +786,17 @@ function gamePayload(game, viewerId) {
     randomSoundLockedUntil: game.soundLockedUntil || 0,
     randomSoundUsed: Boolean(game.randomSoundPushes?.has(randomSoundTurnKey(game, viewerId))),
     takeback: takebackPayload(game, viewerId),
-    accuracyAnalysis: game.accuracyAnalysis || null
+    accuracyAnalysis: game.accuracyAnalysis || null,
+    rematch: rematchPayload(game, viewerId)
+  };
+}
+
+function rematchPayload(game, viewerId) {
+  const requests = game.rematchRequests || new Set();
+  return {
+    requestedByViewer: requests.has(viewerId),
+    requested: requests.size,
+    needed: game.kind === "team" ? gamePlayers(game).length : 2
   };
 }
 
@@ -1170,6 +1180,7 @@ function createGame(a, b, timeKey) {
     videoReady: new Set(),
     videoStartedPairs: new Set(),
     randomSoundPushes: new Set(),
+    rematchRequests: new Set(),
     lastTickAt: Date.now(),
     timer: null
   };
@@ -1204,6 +1215,7 @@ function createTeamGame(players, timeKey) {
     videoReady: new Set(),
     videoStartedPairs: new Set(),
     randomSoundPushes: new Set(),
+    rematchRequests: new Set(),
     lastTickAt: Date.now(),
     timer: null
   };
@@ -1776,6 +1788,44 @@ io.on("connection", (socket) => {
     }
     saveAccuracyAnalysis(game, analysis);
     emitGame(game);
+  });
+
+  socket.on("game:rematch", ({ gameId } = {}) => {
+    const game = games.get(gameId || sockets.get(socket.id)?.gameId);
+    if (!game || game.status !== "finished") return socket.emit("error:message", "That game is not ready for a rematch.");
+    if (game.kind === "team") return socket.emit("error:message", "Team rematches are not available yet.");
+    if (!gamePlayers(game).some((player) => player.id === socket.user.id)) return;
+
+    game.rematchRequests ||= new Set();
+    game.rematchRequests.add(socket.user.id);
+    emitGame(game);
+
+    if (game.rematchRequests.size < 2) return;
+
+    const whiteSocket = socketForUser(game.white.id);
+    const blackSocket = socketForUser(game.black.id);
+    if (!whiteSocket || !blackSocket) {
+      return socket.emit("error:message", "Your opponent is no longer online.");
+    }
+
+    const whiteState = sockets.get(whiteSocket.id);
+    const blackState = sockets.get(blackSocket.id);
+    if (
+      !whiteState
+      || !blackState
+      || (whiteState.gameId && whiteState.gameId !== game.id)
+      || (blackState.gameId && blackState.gameId !== game.id)
+    ) {
+      return socket.emit("error:message", "One of you is already in another game.");
+    }
+
+    leaveAllQueues(whiteSocket.id);
+    leaveAllQueues(blackSocket.id);
+    createGame(
+      { ...whiteSocket.user, socketId: whiteSocket.id },
+      { ...blackSocket.user, socketId: blackSocket.id },
+      game.timeControl
+    );
   });
 
   socket.on("game:move", ({ from, to, promotion }) => {

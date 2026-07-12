@@ -107,7 +107,6 @@ const gameResultShareButton = document.querySelector("#gameResultShareButton");
 const resultSharePanel = document.querySelector("#resultSharePanel");
 const resultShareLink = document.querySelector("#resultShareLink");
 const copyResultLinkButton = document.querySelector("#copyResultLinkButton");
-const nativeShareResultButton = document.querySelector("#nativeShareResultButton");
 const facebookShareResultButton = document.querySelector("#facebookShareResultButton");
 const whatsappShareResultButton = document.querySelector("#whatsappShareResultButton");
 const xShareResultButton = document.querySelector("#xShareResultButton");
@@ -181,6 +180,7 @@ const DONKEY_MOODS = [
 ];
 const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
 const donkeyVideoPreloads = new Map();
+const donkeyVideoWatchdogs = new WeakMap();
 let selectedSquare;
 let pendingPremove = null;
 let playingPremove = false;
@@ -483,12 +483,7 @@ begTakebackButton?.addEventListener("click", () => socket?.emit("game:takeback:r
 acceptBegTakebackButton?.addEventListener("click", () => socket?.emit("game:takeback:respond", { action: "accept" }));
 document.querySelector("#addOpponentButton").addEventListener("click", addCurrentOpponent);
 document.querySelector("#analyzeFinishedGameButton").addEventListener("click", () => {
-  if (!currentGame?.id) return;
-  if (me?.isGuest) {
-    showAccountGate("analyze finished games and save your history");
-    return;
-  }
-  window.open(`/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`, "_blank", "noopener");
+  openCurrentGameAnalysis();
 });
 document.querySelector(".board-player-top").addEventListener("click", (event) => {
   if (event.currentTarget.dataset.isOpponent === "true" && currentGame?.status === "playing") addCurrentOpponent();
@@ -504,7 +499,6 @@ gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
 gameResultShareButton?.addEventListener("click", shareAccuracyResult);
 copyResultLinkButton?.addEventListener("click", () => copyResultShareText({ social: false }));
 copySocialResultButton?.addEventListener("click", () => copyResultShareText({ social: true }));
-nativeShareResultButton?.addEventListener("click", nativeShareAccuracyResult);
 facebookShareResultButton?.addEventListener("click", () => openShareUrl("facebook"));
 whatsappShareResultButton?.addEventListener("click", () => openShareUrl("whatsapp"));
 xShareResultButton?.addEventListener("click", () => openShareUrl("x"));
@@ -789,6 +783,12 @@ function connectSocket() {
 }
 
 async function enterGame(game) {
+  clearPostGameVideoTimer();
+  gameResultModal?.classList.add("hidden");
+  if (gameResultRematchButton) {
+    gameResultRematchButton.disabled = false;
+    gameResultRematchButton.textContent = "Rematch";
+  }
   currentGame = game;
   gameChat = [];
   renderGameChat();
@@ -1045,6 +1045,7 @@ function renderGame(game) {
   if (game.status === "finished") {
     postGameTimeControl = game.timeControl || postGameTimeControl || selectedTime;
     maybeShowGameResultDialog(game);
+    updateRematchButton(game);
     maybeStartAccuracyAnalysis(game);
     if (game.kind !== "team") {
       me.rating = game.color === "white" ? game.players.white.rating : game.players.black.rating;
@@ -1072,7 +1073,18 @@ function maybeShowGameResultDialog(game) {
   resultSharePanel?.classList.add("hidden");
   if (resultShareLink) resultShareLink.value = "";
   if (accuracyAnalysisStatus) accuracyAnalysisStatus.textContent = game.accuracyAnalysis ? "Accuracy analysis complete." : "Analyzing accuracy...";
+  updateRematchButton(game);
   gameResultModal.classList.remove("hidden");
+}
+
+function updateRematchButton(game) {
+  if (!gameResultRematchButton) return;
+  const available = Boolean(game && game.status === "finished" && game.kind !== "team");
+  gameResultRematchButton.classList.toggle("hidden", !available);
+  if (!available) return;
+  const requested = Boolean(game.rematch?.requestedByViewer);
+  gameResultRematchButton.disabled = requested;
+  gameResultRematchButton.textContent = requested ? "Waiting..." : "Rematch";
 }
 
 function gameResultLine(game) {
@@ -1243,12 +1255,15 @@ function escapeHtml(value) {
 
 function openCurrentGameAnalysis() {
   if (!currentGame?.id) return;
-  location.href = `/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`;
+  if (me?.isGuest) {
+    showAccountGate("analyze finished games and save your history");
+    return;
+  }
+  window.open(`/analysis.html?game=${encodeURIComponent(currentGame.id)}&analyze=1`, "_blank", "noopener");
 }
 
 async function shareAccuracyResult() {
   showResultSharePanel();
-  if (navigator.share) await nativeShareAccuracyResult();
 }
 
 function resultShareUrl() {
@@ -1271,27 +1286,12 @@ function showResultSharePanel() {
   resultSharePanel.classList.remove("hidden");
 }
 
-async function nativeShareAccuracyResult() {
-  const text = resultShareText();
-  const url = resultShareUrl();
-  try {
-    if (navigator.share) {
-      await navigator.share({ title: "ChessFace Accuracy Analysis", text, url });
-    } else {
-      await copyToClipboard(`${text} ${url}`);
-      showNotice("Result link copied.");
-    }
-  } catch {
-    // Sharing can be cancelled by the user.
-  }
-}
-
 async function copyResultShareText({ social = false } = {}) {
   const text = resultShareText();
   const url = resultShareUrl();
-  const suffix = social ? "\n\nPaste this link into your Instagram or TikTok post/story." : "";
+  const suffix = social ? "\n\nPaste this into your Instagram post, story, or DM." : "";
   await copyToClipboard(`${text}\n${url}${suffix}`);
-  showNotice(social ? "Result copied for Instagram/TikTok." : "Result link copied.");
+  showNotice(social ? "Result copied for Instagram." : "Result link copied.");
 }
 
 async function copyToClipboard(text) {
@@ -1330,14 +1330,11 @@ function clearPostGameVideoTimer() {
 }
 
 function requestPostGameRematch() {
-  gameResultModal?.classList.add("hidden");
+  if (!currentGame?.id) return;
   clearPostGameVideoTimer();
-  const timeControl = postGameTimeControl || currentGame?.timeControl || selectedTime || "5+0";
-  selectedTime = timeControl;
-  resetToLobby();
-  timeButtons.forEach((button) => button.classList.toggle("active", button.dataset.time === timeControl));
-  socket?.emit("queue:join", timeControl);
-  showSeeking(timeControl);
+  socket?.emit("game:rematch", { gameId: currentGame.id });
+  updateRematchButton({ ...currentGame, rematch: { ...currentGame.rematch, requestedByViewer: true } });
+  showNotice("Rematch requested. Waiting for your opponent.");
 }
 
 function continuePostGameVideoTemporarily() {
@@ -1747,7 +1744,7 @@ function ensureLiveStockfish() {
 function requestLiveEvaluation(fen) {
   if (!evalBarFill || !fen) return;
   clearTimeout(liveEvalTimer);
-  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 160);
+  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 80);
 }
 
 async function analyzeLiveFen(fen) {
@@ -1780,7 +1777,7 @@ async function analyzeLiveFen(fen) {
     engine.addEventListener("message", handleMessage);
     engine.postMessage("stop");
     engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go depth 8");
+    engine.postMessage("go depth 6");
   } catch (error) {
     console.warn("Live Stockfish evaluation unavailable", error);
   }
@@ -1815,18 +1812,23 @@ async function setDonkeyMood(video, mood) {
     await preloadDonkeyVideo(mood.src);
     if (video.dataset.moodRequest !== requestId) return;
     video.dataset.mood = mood.id;
+    video.classList.add("is-changing");
     video.src = mood.src;
     video.setAttribute("aria-label", mood.label + " position mood");
     video.load();
+    await waitForDonkeyVideoReady(video, 700).catch(() => {});
     await video.play().catch(() => {});
+    armDonkeyVideoWatchdog(video);
   } catch (_error) {
     if (video.dataset.moodRequest === requestId && !video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) {
       video.src = DONKEY_VIDEO_FALLBACK_SRC;
       video.load();
       video.play().catch(() => {});
+      armDonkeyVideoWatchdog(video);
     }
   } finally {
     if (video.dataset.moodRequest === requestId) {
+      video.classList.remove("is-changing");
       delete video.dataset.pendingMood;
       delete video.dataset.moodRequest;
     }
@@ -1843,7 +1845,7 @@ function preloadDonkeyVideo(src) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("Donkey video preload timed out"));
-    }, 3500);
+    }, 1200);
     const cleanup = () => {
       window.clearTimeout(timeout);
       probe.removeEventListener("loadeddata", handleReady);
@@ -1868,6 +1870,37 @@ function preloadDonkeyVideo(src) {
   return promise;
 }
 
+function waitForDonkeyVideoReady(video, timeoutMs = 700) {
+  if (!video || video.readyState >= 3) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timeout = window.setTimeout(done, timeoutMs);
+    function done() {
+      window.clearTimeout(timeout);
+      video.removeEventListener("canplay", done);
+      video.removeEventListener("loadeddata", done);
+      resolve();
+    }
+    video.addEventListener("canplay", done, { once: true });
+    video.addEventListener("loadeddata", done, { once: true });
+  });
+}
+
+function armDonkeyVideoWatchdog(video) {
+  if (!video) return;
+  window.clearInterval(donkeyVideoWatchdogs.get(video));
+  const timer = window.setInterval(() => {
+    if (!document.body.contains(video)) {
+      window.clearInterval(timer);
+      return;
+    }
+    if (video.paused || video.readyState < 2) {
+      video.load();
+      video.play?.().catch(() => {});
+    }
+  }, 900);
+  donkeyVideoWatchdogs.set(video, timer);
+}
+
 function scheduleDonkeyVideoWarmup() {
   const orderedSources = [...new Set([
     DONKEY_VIDEO_FALLBACK_SRC,
@@ -1882,19 +1915,17 @@ function scheduleDonkeyVideoWarmup() {
 }
 
 function warmDonkeyVideos(sources, index = 0) {
-  const src = sources[index];
-  if (!src) return;
-  preloadDonkeyVideo(src).catch(() => {}).finally(() => {
-    window.setTimeout(() => warmDonkeyVideos(sources, index + 1), 550);
-  });
+  sources.forEach((src) => preloadDonkeyVideo(src).catch(() => {}));
 }
 
 [topDonkeyMood, bottomDonkeyMood].forEach((video) => {
+  armDonkeyVideoWatchdog(video);
   video?.addEventListener("error", () => {
     if (video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) return;
     video.src = DONKEY_VIDEO_FALLBACK_SRC;
     video.load();
     video.play().catch(() => {});
+    armDonkeyVideoWatchdog(video);
   });
 });
 

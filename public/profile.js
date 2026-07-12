@@ -26,6 +26,7 @@ let games = [];
 let selectedStatsTime = "3+0";
 let selectedReviewPly = 0;
 let selectedReviewGame;
+let reviewBoardOrientation = null;
 let analysisRunId = 0;
 let stockfishWorker;
 let stockfishReadyPromise;
@@ -262,6 +263,7 @@ function appendSvg(tag, attrs, text) {
 }
 
 function renderReview(game) {
+  const previousGameId = selectedReviewGame?.id;
   selectedReviewGame = game;
   const color = game.players.white.id === me.id ? "white" : "black";
   const opponent = color === "white" ? game.players.black : game.players.white;
@@ -270,7 +272,11 @@ function renderReview(game) {
   const moves = Array.isArray(game.moves) ? game.moves : [];
   const cachedAnalysis = game.analysis || null;
   const isFocusedAnalysis = isAnalysisPage;
+  if (previousGameId && previousGameId !== game.id) reviewBoardOrientation = null;
+  if (!reviewBoardOrientation) reviewBoardOrientation = color;
   selectedReviewPly = Math.min(selectedReviewPly, Math.max(0, positions.length - 1));
+  const topPlayer = reviewBoardOrientation === "white" ? game.players.black : game.players.white;
+  const bottomPlayer = reviewBoardOrientation === "white" ? game.players.white : game.players.black;
   reviewPanel.innerHTML = `
     <div class="${isFocusedAnalysis ? "analysis-game-head" : "review-game-head"}">
       <div>
@@ -283,26 +289,35 @@ function renderReview(game) {
         <span>Rating ${change >= 0 ? "+" : ""}${change}</span>
       </div>
     </div>
-    <section class="analysis-board-stage">
-      <div class="review-board" id="reviewBoard"></div>
-    </section>
-    <div class="review-controls">
-      <button type="button" class="ghost" id="reviewStartButton">|&lt;</button>
-      <button type="button" class="ghost" id="reviewPrevButton">&lt;</button>
-      <span id="reviewMoveCount"></span>
-      <button type="button" class="ghost" id="reviewNextButton">&gt;</button>
-      <button type="button" class="ghost" id="reviewEndButton">&gt;|</button>
+    <div class="analysis-review-grid">
+      <section class="analysis-board-column">
+        <div class="analysis-board-stage">
+          ${renderReviewPlayerStrip(topPlayer, "top")}
+          <div class="review-board" id="reviewBoard"></div>
+          ${renderReviewPlayerStrip(bottomPlayer, "bottom")}
+        </div>
+        <div class="review-controls">
+          <button type="button" class="ghost" id="reviewStartButton">|&lt;</button>
+          <button type="button" class="ghost" id="reviewPrevButton">&lt;</button>
+          <span id="reviewMoveCount"></span>
+          <button type="button" class="ghost" id="reviewNextButton">&gt;</button>
+          <button type="button" class="ghost" id="reviewEndButton">&gt;|</button>
+        </div>
+        <button type="button" class="ghost review-flip-button" id="reviewFlipButton">Flip board</button>
+        <div class="review-current" id="reviewCurrentMove"></div>
+      </section>
+      <section class="analysis-side-column">
+        <button type="button" class="primary analysis-button" id="analyzeGameButton">Analyze game</button>
+        <div class="analysis-panel ${cachedAnalysis ? "" : "hidden"}" id="analysisPanel">
+          ${cachedAnalysis ? renderAnalysisHtml(cachedAnalysis) : ""}
+        </div>
+        ${isFocusedAnalysis ? "" : `<div class="move-record">${escapeHtml(formatReviewPgn(game))}</div>`}
+      </section>
     </div>
-    <div class="review-current" id="reviewCurrentMove"></div>
-    <button type="button" class="primary analysis-button" id="analyzeGameButton">Analyze game</button>
-    <div class="analysis-panel ${cachedAnalysis ? "" : "hidden"}" id="analysisPanel">
-      ${cachedAnalysis ? renderAnalysisHtml(cachedAnalysis) : ""}
-    </div>
-    <div class="move-record">${escapeHtml(formatReviewPgn(game))}</div>
   `;
   const updateReplay = () => {
     const fen = positions[selectedReviewPly] || positions[0] || "8/8/8/8/8/8/8/8 w - - 0 1";
-    renderReviewBoard(fen, color);
+    renderReviewBoard(fen, reviewBoardOrientation || color);
     const currentMove = moves[selectedReviewPly - 1];
     document.querySelector("#reviewMoveCount").textContent = `${selectedReviewPly} / ${Math.max(0, positions.length - 1)}`;
     document.querySelector("#reviewCurrentMove").textContent = currentMove
@@ -312,6 +327,7 @@ function renderReview(game) {
     document.querySelector("#reviewPrevButton").disabled = selectedReviewPly === 0;
     document.querySelector("#reviewNextButton").disabled = selectedReviewPly >= positions.length - 1;
     document.querySelector("#reviewEndButton").disabled = selectedReviewPly >= positions.length - 1;
+    updateCurrentMoveAnalysis(game.analysis || cachedAnalysis, selectedReviewPly);
   };
   document.querySelector("#analyzeGameButton").addEventListener("click", () => {
     if (isAnalysisPage) analyzeGame(game);
@@ -333,8 +349,24 @@ function renderReview(game) {
     selectedReviewPly = Math.max(0, positions.length - 1);
     updateReplay();
   });
+  document.querySelector("#reviewFlipButton").addEventListener("click", () => {
+    reviewBoardOrientation = (reviewBoardOrientation || color) === "white" ? "black" : "white";
+    renderReview(game);
+  });
   bindAnalysisMoveClicks(game);
   updateReplay();
+}
+
+function renderReviewPlayerStrip(player, position) {
+  return `
+    <div class="review-player-strip ${position}">
+      <img src="${escapeHtml(player?.avatarUrl || "/default-avatar.svg")}" alt="" />
+      <div>
+        <strong>${escapeHtml(player?.username || "Player")}</strong>
+        <span>${player?.rating ? `${player.rating} rating` : ""}</span>
+      </div>
+    </div>
+  `;
 }
 
 function formatReviewPgn(game) {
@@ -386,6 +418,7 @@ async function analyzeGame(game) {
     if (analysisRunId === runId && selectedReviewGame?.id === game.id) {
       panel.innerHTML = renderAnalysisHtml(analysis);
       bindAnalysisMoveClicks(game);
+      updateCurrentMoveAnalysis(analysis, selectedReviewPly);
     }
   } catch (error) {
     panel.innerHTML = `<p class="analysis-status">Stockfish could not finish this review. Refresh and try again. ${escapeHtml(error.message || "")}</p>`;
@@ -571,9 +604,11 @@ function classifyMove(move, before, after, beforeFen) {
   const bestBefore = scoreToCentipawns(before.score);
   const afterForMover = -scoreToCentipawns(after.score);
   const centipawnLoss = Math.max(0, Math.round(bestBefore - afterForMover));
+  const evalGain = Math.round(afterForMover - bestBefore);
   const isBest = before.bestMove && playedMove === before.bestMove;
   let label = "Good";
-  if (isBest || centipawnLoss <= 15) label = "Best";
+  if (isBest && evalGain >= 180) label = "Brilliant";
+  else if (isBest || centipawnLoss <= 15) label = "Best";
   else if (centipawnLoss <= 45) label = "Excellent";
   else if (centipawnLoss <= 90) label = "Good";
   else if (centipawnLoss <= 180) label = "Inaccuracy";
@@ -587,6 +622,7 @@ function classifyMove(move, before, after, beforeFen) {
     bestMove: before.bestMove,
     lines: Array.isArray(before.lines) ? before.lines : [],
     centipawnLoss,
+    evalGain,
     label,
     beforeEval: bestBefore,
     afterEval: afterForMover
@@ -605,7 +641,7 @@ function moveToUci(move) {
 }
 
 function summarizeAnalysis(moveReviews) {
-  const counts = { Best: 0, Excellent: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 };
+  const counts = { Brilliant: 0, Best: 0, Excellent: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 };
   let totalLoss = 0;
   moveReviews.forEach((review) => {
     counts[review.label] = (counts[review.label] || 0) + 1;
@@ -618,16 +654,34 @@ function summarizeAnalysis(moveReviews) {
 
 function renderAnalysisHtml(analysis) {
   return `
-    <div class="analysis-summary">
-      <span>Accuracy <strong>${analysis.accuracy}%</strong></span>
-      <span>Avg loss <strong>${analysis.averageLoss}</strong></span>
-      <span>Mistakes <strong>${analysis.counts.Mistake || 0}</strong></span>
-      <span>Blunders <strong>${analysis.counts.Blunder || 0}</strong></span>
+    <div class="analysis-overview">
+      <section class="analysis-efficiency-card">
+        <p class="eyebrow">Total result</p>
+        <strong>${analysis.accuracy}%</strong>
+        <span>Total efficiency / accuracy rate</span>
+        <small>Average loss ${analysis.averageLoss}</small>
+      </section>
+      <section class="analysis-counts-card">
+        <p class="eyebrow">Move quality</p>
+        <div>
+          ${renderAnalysisCount("Best", analysis.counts.Best)}
+          ${renderAnalysisCount("Brilliant", analysis.counts.Brilliant)}
+          ${renderAnalysisCount("Excellent", analysis.counts.Excellent)}
+          ${renderAnalysisCount("Good", analysis.counts.Good)}
+          ${renderAnalysisCount("Inaccuracy", analysis.counts.Inaccuracy)}
+          ${renderAnalysisCount("Mistake", analysis.counts.Mistake)}
+          ${renderAnalysisCount("Blunder", analysis.counts.Blunder)}
+        </div>
+      </section>
     </div>
-    <div class="analysis-moves">
-      ${analysis.moves.map(renderAnalyzedMove).join("")}
-    </div>
+    <section class="current-analysis-box" id="currentAnalysisBox">
+      ${renderCurrentMoveAnalysis(analysis, selectedReviewPly)}
+    </section>
   `;
+}
+
+function renderAnalysisCount(label, value = 0) {
+  return `<span class="${label.toLowerCase()}"><b>${value || 0}</b>${label}</span>`;
 }
 
 function renderAnalyzedMove(move) {
@@ -636,8 +690,47 @@ function renderAnalyzedMove(move) {
       <span>${move.index}. ${escapeHtml(move.san)}</span>
       <b>${move.label}</b>
       <small>Best: ${escapeHtml(move.bestMove || "-")} · loss ${move.centipawnLoss}</small>
-      ${renderMoveLines(move.lines)}
     </button>
+  `;
+}
+
+function updateCurrentMoveAnalysis(analysis, ply) {
+  const box = document.querySelector("#currentAnalysisBox");
+  if (!box) return;
+  box.innerHTML = renderCurrentMoveAnalysis(analysis, ply);
+  document.querySelectorAll(".analysis-move[data-ply]").forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.ply) === ply);
+  });
+}
+
+function renderCurrentMoveAnalysis(analysis, ply) {
+  if (!analysis?.moves?.length) {
+    return '<p class="analysis-status">Run analysis to see engine choices for the selected move.</p>';
+  }
+  const move = analysis.moves.find((item) => item.index === ply);
+  if (!move) {
+    return `
+      <div class="current-analysis-empty">
+        <p class="eyebrow">Selected position</p>
+        <h3>Starting position</h3>
+        <span>Move to a played position to see the engine choices.</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="current-analysis-head">
+      <div>
+        <p class="eyebrow">Selected move</p>
+        <h3>${move.index}. ${escapeHtml(move.san)}</h3>
+      </div>
+      <strong class="${move.label.toLowerCase()}">${move.label}</strong>
+    </div>
+    <div class="current-analysis-meta">
+      <span>Best <b>${escapeHtml(move.bestMove || "-")}</b></span>
+      <span>Loss <b>${move.centipawnLoss}</b></span>
+    </div>
+    <p class="current-analysis-caption">Best move recommendations</p>
+    ${renderMoveLines(move.lines)}
   `;
 }
 
