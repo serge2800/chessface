@@ -819,9 +819,18 @@ window.ChessFaceSounds = (() => {
     }
   }
 
+  function normalizeSoundOptions(nextOptions) {
+    const flatOptions = Array.isArray(nextOptions?.[0]) ? nextOptions.flat() : nextOptions;
+    return Array.isArray(flatOptions)
+      ? flatOptions.filter((sound) => sound && typeof sound.id === "string")
+      : [];
+  }
+
+  soundOptions = normalizeSoundOptions(soundOptions);
+
   function setSoundOptions(nextOptions) {
     if (!Array.isArray(nextOptions) || !nextOptions.length) return;
-    soundOptions = nextOptions.filter((sound) => sound && typeof sound.id === "string");
+    soundOptions = normalizeSoundOptions(nextOptions);
   }
 
   return {

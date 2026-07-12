@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-fast-home-v1";
+const APP_VERSION = "2026-07-12-random-sound-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
