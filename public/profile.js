@@ -814,7 +814,6 @@ function renderCurrentMoveAnalysis(analysis, ply) {
     </div>
     <div class="current-analysis-meta">
       <span>Best <b>${escapeHtml(move.bestMove || "-")}</b></span>
-      <span>Loss <b>${move.centipawnLoss}</b></span>
     </div>
     <p class="current-analysis-caption">Best move recommendations</p>
     ${renderMoveLines(move.lines)}
