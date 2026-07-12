@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-live-eval-recovery-v1";
+const APP_VERSION = "2026-07-12-board-history-keys-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -167,6 +167,7 @@ let me;
 let appShown = false;
 let selectedTime = "5+0";
 let currentGame;
+let boardHistoryIndex = null;
 let postGameVideoTimer;
 let postGameTimeControl = "5+0";
 let pendingRematchGameId = null;
@@ -755,7 +756,7 @@ function flagEmoji(countryCode) {
 function handleErrorMessage(message) {
   if (String(message || "").toLowerCase().includes("illegal move")) {
     playIllegalMoveSound();
-    if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   showNotice(message);
@@ -1071,12 +1072,76 @@ function applyMatchmakingSlide(index) {
   matchmakingCaption.textContent = slide.caption;
 }
 
+function latestPositionIndex(game = currentGame) {
+  return Math.max(0, (Array.isArray(game?.positions) ? game.positions.length : 1) - 1);
+}
+
+function displayedPositionIndex(game = currentGame) {
+  const latestIndex = latestPositionIndex(game);
+  if (boardHistoryIndex === null) return latestIndex;
+  return Math.max(0, Math.min(boardHistoryIndex, latestIndex));
+}
+
+function displayedFenForGame(game = currentGame) {
+  if (!game) return "";
+  const positions = Array.isArray(game.positions) ? game.positions : [];
+  const index = displayedPositionIndex(game);
+  return positions[index] || game.fen;
+}
+
+function displayedLastMoveForGame(game = currentGame) {
+  if (!game) return null;
+  if (boardHistoryIndex === null) return game.lastMove || null;
+  const move = Array.isArray(game.moves) ? game.moves[displayedPositionIndex(game) - 1] : null;
+  return move ? { from: move.from, to: move.to } : null;
+}
+
+function isViewingHistoricalPosition(game = currentGame) {
+  return Boolean(game && boardHistoryIndex !== null && displayedPositionIndex(game) < latestPositionIndex(game));
+}
+
+function renderCurrentBoard() {
+  if (!currentGame) return;
+  renderBoard(displayedFenForGame(currentGame), currentGame.color);
+}
+
+function setBoardHistoryIndex(index) {
+  if (!currentGame || !Array.isArray(currentGame.positions) || !currentGame.positions.length) return;
+  const latestIndex = latestPositionIndex(currentGame);
+  const nextIndex = Math.max(0, Math.min(index, latestIndex));
+  boardHistoryIndex = nextIndex >= latestIndex ? null : nextIndex;
+  selectedSquare = null;
+  finishPieceDrag();
+  renderCurrentBoard();
+  requestLiveEvaluation(displayedFenForGame(currentGame));
+}
+
+function stepBoardHistory(delta) {
+  if (!currentGame || !Array.isArray(currentGame.positions) || currentGame.positions.length < 2) return;
+  setBoardHistoryIndex(displayedPositionIndex(currentGame) + delta);
+}
+
+function handleBoardHistoryKeydown(event) {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  const target = event.target;
+  if (target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  if (!currentGame || gameResultModal?.contains(target)) return;
+  event.preventDefault();
+  stepBoardHistory(event.key === "ArrowLeft" ? -1 : 1);
+}
+
 function renderGame(game) {
+  const previousGameId = currentGame?.id;
+  if (previousGameId && previousGameId !== game.id) boardHistoryIndex = null;
   const previousFen = currentGame?.fen;
+  const previousDisplayedFen = currentGame ? displayedFenForGame(currentGame) : null;
   const previousColor = currentGame?.color;
-  const boardNeedsRender = !board?.querySelector(".square") || !previousFen || previousFen !== game.fen || previousColor !== game.color;
+  const nextDisplayedFen = displayedFenForGame(game);
+  const boardNeedsRender = !board?.querySelector(".square") || !previousDisplayedFen || previousDisplayedFen !== nextDisplayedFen || previousColor !== game.color;
   syncPlayerSoundSettings(game.soundSettings);
   currentGame = game;
+  if (boardHistoryIndex !== null && boardHistoryIndex >= latestPositionIndex(game)) boardHistoryIndex = null;
   gameLayout?.classList.toggle("team-game-layout", game.kind === "team");
   boardWrap?.classList.toggle("team-game", game.kind === "team");
   boardMeta?.classList.toggle("team-turn-panel", game.kind === "team");
@@ -1094,8 +1159,8 @@ function renderGame(game) {
   renderBoardPlayers(game);
   renderTeamRoster(game);
   updateOpponentProfileActions(game);
-  if (boardNeedsRender) renderBoard(game.fen, game.color);
-  if (game.status === "playing" && (!previousFen || previousFen !== game.fen)) requestLiveEvaluation(game.fen);
+  if (boardNeedsRender) renderBoard(nextDisplayedFen, game.color);
+  if (game.status === "playing" && (!previousDisplayedFen || previousDisplayedFen !== nextDisplayedFen)) requestLiveEvaluation(nextDisplayedFen);
   renderVideoControls(game);
   if (liveKitRoom && game.status === "playing" && !game.videoOff) scheduleLiveKitSync(liveKitRoom);
   if (!requiresLiveKitVideo(game)) syncPeerNegotiations();
@@ -2159,6 +2224,8 @@ function renderBoard(fen, color) {
   board.innerHTML = "";
   board.classList.toggle("show-coordinates", settings.coordinates);
   board.dataset.orientation = color;
+  board.classList.toggle("reviewing-history", isViewingHistoricalPosition());
+  const displayedLastMove = displayedLastMoveForGame();
   const rows = fen.split(" ")[0].split("/");
   const ranks = color === "white" ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
   const files = color === "white" ? ["a", "b", "c", "d", "e", "f", "g", "h"] : ["h", "g", "f", "e", "d", "c", "b", "a"];
@@ -2184,7 +2251,7 @@ function renderBoard(fen, color) {
       square.className = `square ${((files.indexOf(file) + ranks.indexOf(rank)) % 2 === 0) ? "light" : "dark"}`;
       if (pieceAt[squareName]) square.classList.add(pieceAt[squareName] === pieceAt[squareName].toUpperCase() ? "white-piece" : "black-piece");
       if (selectedSquare === squareName) square.classList.add("selected");
-      if (settings.highlightMoves && currentGame?.lastMove && (currentGame.lastMove.from === squareName || currentGame.lastMove.to === squareName)) {
+      if (settings.highlightMoves && displayedLastMove && (displayedLastMove.from === squareName || displayedLastMove.to === squareName)) {
         square.classList.add("last-move");
       }
       if (pendingPremove && currentGame?.id === pendingPremove.gameId && (pendingPremove.from === squareName || pendingPremove.to === squareName)) {
@@ -2232,6 +2299,10 @@ function renderBoardCoordinates(files, ranks) {
 
 function handleSquareClick(square, piece) {
   if (!currentGame || currentGame.status !== "playing") return;
+  if (isViewingHistoricalPosition()) {
+    showNotice("Use the right arrow key to return to the live position.");
+    return;
+  }
   if (!selectedSquare) {
     if (!piece) return;
     if (!canMovePiece(piece)) {
@@ -2239,17 +2310,17 @@ function handleSquareClick(square, piece) {
       return;
     }
     selectedSquare = square;
-    renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   if (selectedSquare === square) {
     selectedSquare = null;
-    renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   if (piece && isOwnPiece(piece) && canMovePiece(piece)) {
     selectedSquare = square;
-    renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   makeMove(selectedSquare, square);
@@ -2351,6 +2422,7 @@ function optimisticFenAfterMove(fen, from, to, promotion = "") {
 
 function canMovePiece(piece) {
   if (!piece || !currentGame || currentGame.status !== "playing") return false;
+  if (isViewingHistoricalPosition()) return false;
   return isOwnPiece(piece) && (isMyTurn(currentGame) || canUsePremoves(currentGame));
 }
 
@@ -2367,13 +2439,13 @@ function queuePremove(from, to) {
   const targetPiece = pieceAtSquare(to);
   if (targetPiece && isOwnPiece(targetPiece)) {
     showNotice("Choose an empty square or an opponent piece for your premove.");
-    renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return true;
   }
   pendingPremove = { gameId: currentGame.id, from, to };
   selectedSquare = null;
   showNotice("Premove set.");
-  renderBoard(currentGame.fen, currentGame.color);
+  renderCurrentBoard();
   return true;
 }
 
@@ -2392,28 +2464,33 @@ function maybePlayPendingPremove(game, myTurn) {
       await makeMove(move.from, move.to);
     } finally {
       playingPremove = false;
-      if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+      renderCurrentBoard();
     }
   }, 0);
 }
 
 async function makeMove(from, to) {
   if (!from || !to || from === to) return;
+  if (isViewingHistoricalPosition()) {
+    showNotice("Use the right arrow key to return to the live position.");
+    renderCurrentBoard();
+    return;
+  }
   if (!isMyTurn(currentGame)) {
     if (queuePremove(from, to)) return;
     showMoveBlockedNotice();
-    if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   if (!isLegalMove(from, to)) {
     playIllegalMoveSound();
     if (playingPremove) showNotice("Premove was not legal anymore.");
-    if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   const promotion = await promotionForMove(from, to);
   if (promotion === null) {
-    if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   socket.emit("game:move", { from, to, ...(promotion ? { promotion } : {}) });
@@ -2520,6 +2597,11 @@ function positionPromotionChoiceMenu(menu, square, itemCount) {
 function startPieceDrag(event, square, piece) {
   if (event.button !== undefined && event.button !== 0) return;
   if (!currentGame || currentGame.status !== "playing") return;
+  if (isViewingHistoricalPosition()) {
+    event.preventDefault();
+    showNotice("Use the right arrow key to return to the live position.");
+    return;
+  }
 
   if (selectedSquare && selectedSquare !== square && (!piece || !isOwnPiece(piece))) {
     event.preventDefault();
@@ -2589,7 +2671,7 @@ function dropPiece(event) {
   finishPieceDrag();
   if (wasTap) {
     selectedSquare = wasSelected ? null : from;
-    renderBoard(currentGame.fen, currentGame.color);
+    renderCurrentBoard();
     return;
   }
   if (target && target !== from) {
@@ -2598,13 +2680,13 @@ function dropPiece(event) {
     return;
   }
   selectedSquare = from;
-  renderBoard(currentGame.fen, currentGame.color);
+  renderCurrentBoard();
 }
 
 function cancelPieceDrag() {
   selectedSquare = null;
   finishPieceDrag();
-  if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+  renderCurrentBoard();
 }
 
 function finishPieceDrag() {
@@ -2627,7 +2709,7 @@ function finishPieceDrag() {
 function moveSelectedPieceTo(targetSquare) {
   const from = selectedSquare;
   selectedSquare = null;
-  renderBoard(currentGame.fen, currentGame.color);
+  renderCurrentBoard();
   makeMove(from, targetSquare);
 }
 
@@ -4152,7 +4234,7 @@ function updateSettingsFromControls() {
 function applySettings() {
   document.body.dataset.boardTheme = settings.boardTheme;
   document.body.classList.toggle("hide-captured", !settings.capturedPieces);
-  if (currentGame) renderBoard(currentGame.fen, currentGame.color);
+  renderCurrentBoard();
 }
 
 function renderCapturedPieces(pieceAt) {
@@ -4181,6 +4263,7 @@ function capturedText(color, onBoard, starting) {
 syncSettingsControls();
 syncSoundControls();
 applySettings();
+document.addEventListener("keydown", handleBoardHistoryKeydown);
 boot();
 scheduleDonkeyVideoWarmup();
 setAuthMode(mode);
