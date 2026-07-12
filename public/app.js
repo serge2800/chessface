@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-board-history-keys-v1";
+const APP_VERSION = "2026-07-12-history-key-sounds-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1106,19 +1106,22 @@ function renderCurrentBoard() {
 }
 
 function setBoardHistoryIndex(index) {
-  if (!currentGame || !Array.isArray(currentGame.positions) || !currentGame.positions.length) return;
+  if (!currentGame || !Array.isArray(currentGame.positions) || !currentGame.positions.length) return false;
   const latestIndex = latestPositionIndex(currentGame);
+  const currentIndex = displayedPositionIndex(currentGame);
   const nextIndex = Math.max(0, Math.min(index, latestIndex));
+  if (nextIndex === currentIndex) return false;
   boardHistoryIndex = nextIndex >= latestIndex ? null : nextIndex;
   selectedSquare = null;
   finishPieceDrag();
   renderCurrentBoard();
   requestLiveEvaluation(displayedFenForGame(currentGame));
+  return true;
 }
 
 function stepBoardHistory(delta) {
-  if (!currentGame || !Array.isArray(currentGame.positions) || currentGame.positions.length < 2) return;
-  setBoardHistoryIndex(displayedPositionIndex(currentGame) + delta);
+  if (!currentGame || !Array.isArray(currentGame.positions) || currentGame.positions.length < 2) return false;
+  return setBoardHistoryIndex(displayedPositionIndex(currentGame) + delta);
 }
 
 function handleBoardHistoryKeydown(event) {
@@ -1128,7 +1131,7 @@ function handleBoardHistoryKeydown(event) {
   if (target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
   if (!currentGame || gameResultModal?.contains(target)) return;
   event.preventDefault();
-  stepBoardHistory(event.key === "ArrowLeft" ? -1 : 1);
+  if (stepBoardHistory(event.key === "ArrowLeft" ? -1 : 1) && settings.moveSound) playMoveSound();
 }
 
 function renderGame(game) {
