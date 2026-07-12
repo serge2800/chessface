@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-video-chat-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-game-layout-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -61,6 +61,8 @@
             <span id="watchMoveStatus">No game selected</span>
             <span id="watchSpectatorCount">0 watching</span>
           </div>
+        </section>
+        <aside class="watch-side-panel" aria-label="Live cameras and chat">
           <div class="watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
             <div class="watch-video-tile" data-watch-video="white">
               <video id="watchWhiteVideo" autoplay playsinline muted></video>
@@ -87,12 +89,12 @@
               <button type="submit">Send</button>
             </form>
           </section>
-        </section>
+        </aside>
       </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-12-watch-video-chat-v1"></script>
+    <script src="watch.js?v=2026-07-13-watch-game-layout-v2"></script>
   </body>
 </html>

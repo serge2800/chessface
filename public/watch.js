@@ -29,6 +29,7 @@ let watchChat = [];
 let liveKitModulePromise = null;
 let watchLiveKitRoom = null;
 let watchLiveKitTracks = new Map();
+let watchCameraStatusTimer = null;
 
 renderNavigation();
 
@@ -194,6 +195,7 @@ function joinGame(gameId) {
 
 function renderSelectedGame() {
   watchDetailSection?.classList.toggle("hidden", !selectedGame);
+  document.body.classList.toggle("is-watching-game", Boolean(selectedGame));
   if (!selectedGame) {
     closeWatchLiveKit();
     renderEmptyBoard();
@@ -292,6 +294,11 @@ function renderWatchVideoStatus(message) {
   if (watchBlackVideoLabel) watchBlackVideoLabel.textContent = message;
 }
 
+function renderWatchVideoSideStatus(side, message) {
+  const label = side === "black" ? watchBlackVideoLabel : watchWhiteVideoLabel;
+  if (label) label.textContent = message;
+}
+
 function loadLiveKitClient() {
   liveKitModulePromise ||= import(LIVEKIT_CLIENT_URL);
   return liveKitModulePromise;
@@ -301,6 +308,7 @@ async function startWatchLiveKit(game) {
   if (!game?.id || game.status !== "playing" || !token) return;
   closeWatchLiveKit();
   renderWatchVideoPlaceholders();
+  renderWatchVideoStatus("Connecting cameras...");
   try {
     const response = await fetch("/api/livekit-token", {
       method: "POST",
@@ -313,7 +321,7 @@ async function startWatchLiveKit(game) {
     const session = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(session.error || "Camera room unavailable.");
     if (!session.enabled) {
-      renderWatchVideoStatus("Cameras unavailable");
+      renderWatchVideoStatus("Cameras require LiveKit");
       return;
     }
     const LiveKit = await loadLiveKitClient();
@@ -326,6 +334,7 @@ async function startWatchLiveKit(game) {
     watchLiveKitRoom = room;
     await room.connect(session.url, session.token, { autoSubscribe: true });
     syncWatchLiveKitParticipants(room);
+    scheduleWatchCameraStatusCheck();
   } catch (error) {
     console.warn("[ChessFace] Watch cameras unavailable:", error);
     renderWatchVideoStatus("Cameras unavailable");
@@ -417,6 +426,7 @@ function attachWatchLiveKitTrack(track, participant) {
   video.muted = true;
   video.volume = 0;
   video.play?.().catch(() => {});
+  renderWatchVideoSideStatus(side, side === "white" ? `${firstPlayer(selectedGame?.players?.white).username} · white` : `${firstPlayer(selectedGame?.players?.black).username} · black`);
 }
 
 function detachWatchLiveKitTrack(track, participant) {
@@ -479,6 +489,8 @@ function liveKitTrackKind(track) {
 }
 
 function closeWatchLiveKit() {
+  clearTimeout(watchCameraStatusTimer);
+  watchCameraStatusTimer = null;
   if (!watchLiveKitRoom) return;
   try {
     watchLiveKitRoom.disconnect(false);
@@ -494,6 +506,15 @@ function closeWatchLiveKit() {
   [watchWhiteVideo, watchBlackVideo].forEach((video) => {
     if (video) video.srcObject = null;
   });
+}
+
+function scheduleWatchCameraStatusCheck() {
+  clearTimeout(watchCameraStatusTimer);
+  watchCameraStatusTimer = window.setTimeout(() => {
+    if (!watchLiveKitRoom || !selectedGame) return;
+    if (!watchWhiteVideo?.srcObject) renderWatchVideoSideStatus("white", "Waiting for white camera");
+    if (!watchBlackVideo?.srcObject) renderWatchVideoSideStatus("black", "Waiting for black camera");
+  }, 3500);
 }
 
 function renderWatchPlayer(container, players, clock) {
