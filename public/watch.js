@@ -291,18 +291,89 @@ function watchDonkeyMoodForColor(color, whiteCentipawns) {
   return WATCH_DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || WATCH_DONKEY_FALLBACK_MOOD;
 }
 
-function setWatchDonkeyMood(video, mood) {
-  if (!video || !mood || video.dataset.mood === mood.id) return;
+async function setWatchDonkeyMood(video, mood) {
+  if (!video || !mood) return;
+  ensureWatchDonkeyVideoPair(video);
+  const slot = video.parentElement;
+  if (!slot) return;
+  const active = activeWatchDonkeyVideo(video);
+  if (active?.dataset.mood === mood.id) return;
+  const next = inactiveWatchDonkeyVideo(video) || active;
   const source = watchDonkeySource(mood);
-  video.dataset.mood = mood.id;
-  video.classList.add("is-changing");
-  video.setAttribute("aria-label", mood.label + " position mood");
-  if (!video.currentSrc.endsWith(source) && !video.src.endsWith(source)) {
-    video.src = source;
-    video.load();
+  const requestId = `${mood.id}:${Date.now()}:${Math.random()}`;
+  slot.dataset.moodRequest = requestId;
+  next.dataset.mood = mood.id;
+  next.setAttribute("aria-label", mood.label + " position mood");
+  next.classList.add("is-changing");
+  if (!next.currentSrc.endsWith(source) && !next.src.endsWith(source)) {
+    next.src = source;
+    next.load();
   }
-  video.play?.().catch(() => {});
-  window.setTimeout(() => video.classList.remove("is-changing"), 160);
+  const ready = await waitForWatchDonkeyReady(next, 1200);
+  if (slot.dataset.moodRequest !== requestId) return;
+  if (!ready) return;
+  try {
+    next.currentTime = 0;
+  } catch (_) {}
+  next.play?.().catch(() => {});
+  next.classList.add("is-active");
+  active?.classList.remove("is-active");
+  window.setTimeout(() => {
+    next.classList.remove("is-changing");
+    if (active && !active.classList.contains("is-active")) active.pause?.();
+  }, 180);
+}
+
+function ensureWatchDonkeyVideoPair(video) {
+  if (!video || video.dataset.bufferReady) return;
+  const slot = video.parentElement;
+  if (!slot) return;
+  video.classList.add("is-active");
+  video.preload = "auto";
+  const buffer = video.cloneNode(false);
+  buffer.removeAttribute("id");
+  buffer.removeAttribute("aria-label");
+  buffer.classList.remove("is-active", "is-changing");
+  buffer.classList.add("is-buffer");
+  buffer.muted = true;
+  buffer.autoplay = true;
+  buffer.loop = true;
+  buffer.playsInline = true;
+  buffer.preload = "auto";
+  buffer.addEventListener("error", () => recoverWatchDonkey(buffer));
+  video.dataset.bufferReady = "1";
+  buffer.dataset.bufferReady = "1";
+  slot.appendChild(buffer);
+}
+
+function activeWatchDonkeyVideo(video) {
+  return video?.parentElement?.querySelector(".eval-donkey-mood.is-active") || video;
+}
+
+function inactiveWatchDonkeyVideo(video) {
+  return Array.from(video?.parentElement?.querySelectorAll(".eval-donkey-mood") || []).find((candidate) => !candidate.classList.contains("is-active"));
+}
+
+function waitForWatchDonkeyReady(video, timeoutMs = 1200) {
+  if (!video) return Promise.resolve(false);
+  if (video.readyState >= 2) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ready) => {
+      if (done) return;
+      done = true;
+      video.removeEventListener("canplay", markReady);
+      video.removeEventListener("loadeddata", markReady);
+      video.removeEventListener("error", markFailed);
+      resolve(Boolean(ready) || video.readyState >= 2);
+    };
+    const markReady = () => finish(true);
+    const markFailed = () => finish(false);
+    video.addEventListener("canplay", markReady, { once: true });
+    video.addEventListener("loadeddata", markReady, { once: true });
+    video.addEventListener("error", markFailed, { once: true });
+    window.setTimeout(markFailed, timeoutMs);
+  });
 }
 
 function scheduleWatchDonkeyWarmup() {
@@ -334,14 +405,17 @@ function preloadWatchDonkey(src) {
 }
 
 [watchTopDonkeyMood, watchBottomDonkeyMood].forEach((video) => {
-  video?.addEventListener("error", () => {
-    const fallback = watchDonkeySource(WATCH_DONKEY_FALLBACK_MOOD);
-    if (video.src.endsWith(fallback)) return;
-    video.src = fallback;
-    video.load();
-    video.play?.().catch(() => {});
-  });
+  video?.addEventListener("error", () => recoverWatchDonkey(video));
 });
+
+function recoverWatchDonkey(video) {
+  const fallback = watchDonkeySource(WATCH_DONKEY_FALLBACK_MOOD);
+  if (!video || video.src.endsWith(fallback)) return;
+  video.src = fallback;
+  video.dataset.mood = WATCH_DONKEY_FALLBACK_MOOD.id;
+  video.load();
+  video.play?.().catch(() => {});
+}
 
 function addWatchChatMessage(message) {
   if (!selectedGame || message.gameId !== selectedGame.id) return;
