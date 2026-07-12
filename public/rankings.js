@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-12-face-mesh-setting-v1", "/styles.css?v=2026-07-12-watch-click-v1", "/watch.html", "/watch.js?v=2026-07-12-watch-click-v1"];
+  const assets = ["/", "/app.js?v=2026-07-12-livekit-publish-retry-v1", "/styles.css?v=2026-07-12-watch-click-v1", "/watch.html", "/watch.js?v=2026-07-12-watch-click-v1"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");

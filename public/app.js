@@ -152,7 +152,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-face-mesh-setting-v1";
+const APP_VERSION = "2026-07-12-livekit-publish-retry-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -2982,7 +2982,7 @@ async function startLiveKitRoom() {
     setLiveKitState({ mode: "connecting LiveKit", room: session.room || currentGame.id, connectionState: "connecting" });
     await room.connect(session.url, session.token, { autoSubscribe: true });
     refreshLiveKitState(room, { mode: "LiveKit connected", room: session.room || currentGame.id, lastError: "" });
-    await publishLiveKitTracks(room, LiveKit);
+    await publishLiveKitTracks(room, LiveKit, { retries: 1 });
     scheduleLiveKitPublishRepair(room, LiveKit);
     syncLiveKitParticipants(room);
     scheduleLiveKitSync(room);
@@ -3059,25 +3059,22 @@ function wireLiveKitRoom(room, LiveKit) {
   });
 }
 
-async function publishLiveKitTracks(room, LiveKit) {
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function publishLiveKitTracks(room, LiveKit, options = {}) {
   const Track = LiveKit.Track || {};
   const videoTrack = localStream.getVideoTracks()[0];
   const audioTrack = localStream.getAudioTracks()[0];
   if (videoTrack) {
     try {
-      await room.localParticipant.publishTrack(videoTrack, {
-        source: Track.Source?.Camera || "camera",
-        simulcast: false,
-        videoEncoding: {
-          maxBitrate: VIDEO_MAX_BITRATE,
-          maxFramerate: VIDEO_FRAME_RATE
-        }
-      });
+      await publishLiveKitVideoTrack(room, Track, videoTrack, options.retries ?? 0);
       setLiveKitState({ localVideoPublished: true });
     } catch (error) {
       console.warn("[ChessFace] LiveKit camera publish failed:", error);
       setLiveKitState({ localVideoPublished: false, lastError: error.message || "Camera publish failed." });
-      showNotice("Your camera could not be sent, but you can still see the other players.");
+      if (!options.silent) showNotice("Your camera could not be sent, but you can still see the other players.");
     }
   }
   if (audioTrack) {
@@ -3090,6 +3087,26 @@ async function publishLiveKitTracks(room, LiveKit) {
       console.warn("[ChessFace] LiveKit microphone publish failed:", error);
       setLiveKitState({ localAudioPublished: false, lastError: error.message || "Microphone publish failed." });
     }
+  }
+}
+
+async function publishLiveKitVideoTrack(room, Track, videoTrack, retries = 0) {
+  try {
+    await room.localParticipant.publishTrack(videoTrack, {
+      source: Track.Source?.Camera || "camera",
+      simulcast: false,
+      videoEncoding: {
+        maxBitrate: VIDEO_MAX_BITRATE,
+        maxFramerate: VIDEO_FRAME_RATE
+      }
+    });
+  } catch (error) {
+    const hasCameraPublication = liveKitPublications(room?.localParticipant)
+      .some((publication) => liveKitPublicationKind(publication) === "video");
+    if (hasCameraPublication) return;
+    if (retries <= 0) throw error;
+    await sleep(700);
+    return publishLiveKitVideoTrack(room, Track, videoTrack, retries - 1);
   }
 }
 
@@ -3112,7 +3129,7 @@ async function repairLiveKitLocalPublish(room, LiveKit) {
   const videoTrack = localStream?.getVideoTracks?.()[0];
   const audioTrack = localStream?.getAudioTracks?.()[0];
   if ((videoTrack && !hasCameraPublication) || (audioTrack && !hasMicPublication)) {
-    await publishLiveKitTracks(room, LiveKit);
+    await publishLiveKitTracks(room, LiveKit, { silent: true, retries: 1 });
     syncLiveKitParticipants(room);
     refreshLiveKitState(room, { mode: "LiveKit republished local media" });
   }
