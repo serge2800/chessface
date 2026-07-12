@@ -4051,14 +4051,44 @@ body[data-board-theme="wood"] {
     justify-self: center;
   }
 
+  .board-stage > .board {
+    grid-column: 1;
+    grid-row: 1;
+    width: min(100%, calc(100vw - 44px));
+    transform: none !important;
+  }
+
   .eval-bar {
     display: none;
   }
 
   .board-side-controls {
+    grid-column: 1;
+    grid-row: 2;
+    width: min(100%, calc(100vw - 44px));
+    max-width: 760px;
+    justify-self: center;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 0;
     order: 2;
     padding-top: 0;
+    min-height: auto;
+    transform: none;
+  }
+
+  .board-side-controls .media-actions,
+  .board-side-actions {
+    grid-column: 1 / -1;
+  }
+
+  .board-side-controls .board-side-actions,
+  .board-side-controls .turn-random-sound,
+  .board-side-controls .turn-custom-sound,
+  .board-side-controls .face-mesh-button,
+  .board-side-controls .takeback-request-button,
+  .board-side-controls .turn-status-button,
+  .board-side-controls .accept-beg-takeback-button {
+    transform: none;
   }
 
   .board-animation-slots {
@@ -4082,6 +4112,14 @@ body[data-board-theme="wood"] {
 
   .game-layout:not(.team-game-layout) .board-wrap {
     padding-right: 10px;
+  }
+
+  .board-wrap:not(.team-game) > .board-player-top,
+  .board-wrap:not(.team-game) > .board-player-bottom {
+    top: 0;
+    width: min(100%, 760px);
+    max-width: min(100%, 760px);
+    justify-self: center;
   }
 
   .game-layout:not(.team-game-layout) .video-panel {

@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-13-remove-wait-cue-v1", "/styles.css?v=2026-07-13-remove-wait-cue-v1", "/watch.html", "/watch.js?v=2026-07-13-watch-status-camera-v1"];
+  const assets = ["/", "/app.js?v=2026-07-13-tablet-player-card-fix-v1", "/styles.css?v=2026-07-13-tablet-player-card-fix-v1", "/watch.html", "/watch.js?v=2026-07-13-watch-status-camera-v1"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");
