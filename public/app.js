@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-12-rematch-board-reset-v1";
+const APP_VERSION = "2026-07-12-move-latency-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1800,7 +1800,7 @@ function ensureLiveStockfish() {
 function requestLiveEvaluation(fen) {
   if (!evalBarFill || !fen) return;
   clearTimeout(liveEvalTimer);
-  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 80);
+  liveEvalTimer = setTimeout(() => analyzeLiveFen(fen), 650);
 }
 
 async function analyzeLiveFen(fen) {
@@ -1822,7 +1822,7 @@ async function analyzeLiveFen(fen) {
       const scoreMatch = line.match(/\bscore\s+(cp|mate)\s+(-?\d+)/);
       if (scoreMatch) {
         score = { type: scoreMatch[1], value: Number(scoreMatch[2]) };
-        updateEvalBar(score, fen);
+        updateEvalBar(score, fen, { updateMoods: false });
       }
       if (/^bestmove\s+/.test(line)) {
         updateEvalBar(score, fen);
@@ -1833,18 +1833,18 @@ async function analyzeLiveFen(fen) {
     engine.addEventListener("message", handleMessage);
     engine.postMessage("stop");
     engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go depth 6");
+    engine.postMessage("go depth 4");
   } catch (error) {
     console.warn("Live Stockfish evaluation unavailable", error);
   }
 }
 
-function updateEvalBar(score, fen) {
+function updateEvalBar(score, fen, { updateMoods = true } = {}) {
   const whiteCentipawns = scoreToWhiteCentipawns(score, fen);
   const whiteHeight = Math.max(6, Math.min(94, 50 + Math.tanh(whiteCentipawns / 600) * 44));
   evalBarFill.style.height = `${whiteHeight}%`;
   if (evalBarLabel) evalBarLabel.textContent = formatEvalScore(score, fen);
-  updateDonkeyMoods(whiteCentipawns);
+  if (updateMoods) updateDonkeyMoods(whiteCentipawns);
 }
 
 function updateDonkeyMoods(whiteCentipawns) {
@@ -1949,29 +1949,25 @@ function armDonkeyVideoWatchdog(video) {
       window.clearInterval(timer);
       return;
     }
-    if (video.paused || video.readyState < 2) {
+    if (video.paused && video.readyState >= 2) {
+      video.play?.().catch(() => {});
+      return;
+    }
+    if (video.readyState === 0 && video.networkState !== HTMLMediaElement.NETWORK_LOADING) {
       video.load();
       video.play?.().catch(() => {});
     }
-  }, 900);
+  }, 1600);
   donkeyVideoWatchdogs.set(video, timer);
 }
 
 function scheduleDonkeyVideoWarmup() {
-  const orderedSources = [...new Set([
-    DONKEY_VIDEO_FALLBACK_SRC,
-    ...DONKEY_MOODS.slice().sort((a, b) => Math.abs(a.max) - Math.abs(b.max)).map((mood) => mood.src)
-  ])];
-  const run = () => warmDonkeyVideos(orderedSources);
+  const run = () => preloadDonkeyVideo(DONKEY_VIDEO_FALLBACK_SRC).catch(() => {});
   if ("requestIdleCallback" in window) {
-    window.setTimeout(() => window.requestIdleCallback(run, { timeout: 5000 }), 2500);
+    window.setTimeout(() => window.requestIdleCallback(run, { timeout: 8000 }), 4500);
   } else {
-    window.setTimeout(run, 3500);
+    window.setTimeout(run, 6000);
   }
-}
-
-function warmDonkeyVideos(sources, index = 0) {
-  sources.forEach((src) => preloadDonkeyVideo(src).catch(() => {}));
 }
 
 [topDonkeyMood, bottomDonkeyMood].forEach((video) => {
