@@ -152,7 +152,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-livekit-publish-retry-v1";
+const APP_VERSION = "2026-07-12-donkey-mood-images-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -194,20 +194,19 @@ const LIVE_STOCKFISH_SOURCES = [
   }
 ];
 const DONKEY_MOODS = [
-  { id: "10-losing-crushed", src: "/assets/eval/10.mov", label: "Losing badly", max: -800 },
-  { id: "9-losing-horrible", src: "/assets/eval/9.mov", label: "Very bad", max: -500 },
-  { id: "8-losing-danger", src: "/assets/eval/8.mov", label: "In danger", max: -300 },
-  { id: "7-losing-worse", src: "/assets/eval/7.mov", label: "Worse", max: -150 },
-  { id: "6-losing-slightly", src: "/assets/eval/6.mov", label: "Slightly worse", max: -30 },
-  { id: "5-balanced", src: "/assets/eval/5.mov", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", src: "/assets/eval/4.mov", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", src: "/assets/eval/3.mov", label: "Good", max: 300 },
-  { id: "2-winning-very-good", src: "/assets/eval/2.mov", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", src: "/assets/eval/1.mov", label: "Winning big", max: Infinity }
+  { id: "10-losing-crushed", src: "/assets/donkeys/01-about-to-get-mated.png", label: "Losing badly", max: -800 },
+  { id: "9-losing-horrible", src: "/assets/donkeys/02-terrified.png", label: "Very bad", max: -500 },
+  { id: "8-losing-danger", src: "/assets/donkeys/03-panicking.png", label: "In danger", max: -300 },
+  { id: "7-losing-worse", src: "/assets/donkeys/04-worried.png", label: "Worse", max: -150 },
+  { id: "6-losing-slightly", src: "/assets/donkeys/05-slightly-bad.png", label: "Slightly worse", max: -30 },
+  { id: "5-balanced", src: "/assets/donkeys/06-balanced.png", label: "Balanced", max: 30 },
+  { id: "4-winning-slightly", src: "/assets/donkeys/07-slightly-good.png", label: "Slightly better", max: 150 },
+  { id: "3-winning-good", src: "/assets/donkeys/08-happy.png", label: "Good", max: 300 },
+  { id: "2-winning-very-good", src: "/assets/donkeys/09-very-good.png", label: "Very good", max: 500 },
+  { id: "1-winning-happiest", src: "/assets/donkeys/10-about-to-mate.png", label: "Winning big", max: Infinity }
 ];
-const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
-const donkeyVideoPreloads = new Map();
-const donkeyVideoWatchdogs = new WeakMap();
+const DONKEY_IMAGE_FALLBACK_SRC = "/assets/donkeys/06-balanced.png";
+const DONKEY_IMAGE_SOURCES = DONKEY_MOODS.map((mood) => mood.src);
 let matchmakingSlidesPreloaded = false;
 let selectedSquare;
 let pendingPremove = null;
@@ -2054,124 +2053,33 @@ function donkeyMoodForColor(color, whiteCentipawns) {
   return DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || DONKEY_MOODS[5];
 }
 
-async function setDonkeyMood(video, mood) {
-  if (!video || !mood || video.dataset.mood === mood.id || video.dataset.pendingMood === mood.id) return;
-  const requestId = `${mood.id}:${Date.now()}:${Math.random()}`;
-  video.dataset.pendingMood = mood.id;
-  video.dataset.moodRequest = requestId;
-  video.dataset.mood = mood.id;
-  video.classList.add("is-changing");
-  video.src = mood.src;
-  video.setAttribute("aria-label", mood.label + " position mood");
-  video.load();
-  armDonkeyVideoWatchdog(video);
-  try {
-    await waitForDonkeyVideoReady(video, 1200).catch(() => {});
-    if (video.dataset.moodRequest !== requestId) return;
-    await video.play().catch(() => {});
-  } catch (_error) {
-    if (video.dataset.moodRequest === requestId && !video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) {
-      video.src = DONKEY_VIDEO_FALLBACK_SRC;
-      video.load();
-      video.play().catch(() => {});
-      armDonkeyVideoWatchdog(video);
-    }
-  } finally {
-    if (video.dataset.moodRequest === requestId) {
-      video.classList.remove("is-changing");
-      delete video.dataset.pendingMood;
-      delete video.dataset.moodRequest;
-    }
-  }
-}
-
-function preloadDonkeyVideo(src) {
-  if (donkeyVideoPreloads.has(src)) return donkeyVideoPreloads.get(src).promise;
-  const probe = document.createElement("video");
-  probe.muted = true;
-  probe.playsInline = true;
-  probe.preload = "auto";
-  const promise = new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      reject(new Error("Donkey video preload timed out"));
-    }, 1200);
-    const cleanup = () => {
-      window.clearTimeout(timeout);
-      probe.removeEventListener("loadeddata", handleReady);
-      probe.removeEventListener("canplay", handleReady);
-      probe.removeEventListener("error", handleError);
-    };
-    const handleReady = () => {
-      cleanup();
-      resolve();
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error("Donkey video failed to preload"));
-    };
-    probe.addEventListener("loadeddata", handleReady, { once: true });
-    probe.addEventListener("canplay", handleReady, { once: true });
-    probe.addEventListener("error", handleError, { once: true });
-  });
-  donkeyVideoPreloads.set(src, { element: probe, promise });
-  probe.src = src;
-  probe.load();
-  return promise;
-}
-
-function waitForDonkeyVideoReady(video, timeoutMs = 700) {
-  if (!video || video.readyState >= 3) return Promise.resolve();
-  return new Promise((resolve) => {
-    const timeout = window.setTimeout(done, timeoutMs);
-    function done() {
-      window.clearTimeout(timeout);
-      video.removeEventListener("canplay", done);
-      video.removeEventListener("loadeddata", done);
-      resolve();
-    }
-    video.addEventListener("canplay", done, { once: true });
-    video.addEventListener("loadeddata", done, { once: true });
-  });
-}
-
-function armDonkeyVideoWatchdog(video) {
-  if (!video) return;
-  window.clearInterval(donkeyVideoWatchdogs.get(video));
-  const timer = window.setInterval(() => {
-    if (!document.body.contains(video)) {
-      window.clearInterval(timer);
-      return;
-    }
-    if (video.paused && video.readyState >= 2) {
-      video.play?.().catch(() => {});
-      return;
-    }
-    if (video.readyState === 0 && video.networkState !== HTMLMediaElement.NETWORK_LOADING) {
-      video.load();
-      video.play?.().catch(() => {});
-    }
-  }, 1600);
-  donkeyVideoWatchdogs.set(video, timer);
+function setDonkeyMood(image, mood) {
+  if (!image || !mood || image.dataset.mood === mood.id) return;
+  image.dataset.mood = mood.id;
+  image.classList.add("is-changing");
+  image.src = mood.src;
+  image.alt = mood.label + " position mood";
+  image.setAttribute("aria-label", mood.label + " position mood");
+  window.setTimeout(() => image.classList.remove("is-changing"), 120);
 }
 
 function scheduleDonkeyVideoWarmup() {
-  const run = () => preloadDonkeyVideo(DONKEY_VIDEO_FALLBACK_SRC).catch(() => {});
+  const run = () => DONKEY_IMAGE_SOURCES.forEach((src) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+  });
   if ("requestIdleCallback" in window) {
-    window.setTimeout(() => window.requestIdleCallback(run, { timeout: 8000 }), 4500);
+    window.setTimeout(() => window.requestIdleCallback(run, { timeout: 2500 }), 400);
   } else {
-    window.setTimeout(run, 6000);
+    window.setTimeout(run, 800);
   }
 }
 
-[topDonkeyMood, bottomDonkeyMood].forEach((video) => {
-  armDonkeyVideoWatchdog(video);
-  video?.addEventListener("error", () => {
-    if (video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) return;
-    video.src = DONKEY_VIDEO_FALLBACK_SRC;
-    video.load();
-    video.play().catch(() => {});
-    armDonkeyVideoWatchdog(video);
+[topDonkeyMood, bottomDonkeyMood].forEach((image) => {
+  image?.addEventListener("error", () => {
+    if (image.src.endsWith(DONKEY_IMAGE_FALLBACK_SRC)) return;
+    image.src = DONKEY_IMAGE_FALLBACK_SRC;
   });
 });
 
