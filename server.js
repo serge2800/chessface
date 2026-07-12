@@ -918,6 +918,14 @@ function randomPlayableSoundId() {
   return sounds[Math.floor(Math.random() * sounds.length)].id;
 }
 
+function playableSoundId(requestedSoundId) {
+  if (requestedSoundId === "random") return randomPlayableSoundId();
+  const soundId = typeof requestedSoundId === "string" ? requestedSoundId : "";
+  if (!/^[a-z0-9-]{1,80}$/.test(soundId) || soundId === "none") return randomPlayableSoundId();
+  const sound = readSoundManifest().find((item) => item.id === soundId && item.file);
+  return sound ? sound.id : randomPlayableSoundId();
+}
+
 function scheduleRandomSoundUnlock(game) {
   clearTimeout(soundUnlockTimers.get(game.id));
   const delay = Math.max(0, (game.soundLockedUntil || 0) - Date.now());
@@ -943,9 +951,9 @@ function canUseRandomTurnSound(game, playerId) {
   return !game.randomSoundPushes?.has(randomSoundTurnKey(game, playerId));
 }
 
-function randomTurnSoundEvent(game, player, color) {
+function randomTurnSoundEvent(game, player, color, requestedSoundId = "random") {
   const moveCount = game.chess.history().length;
-  const soundId = randomPlayableSoundId();
+  const soundId = playableSoundId(requestedSoundId);
   return {
     id: `${game.id}:${moveCount}:random:${player.id}:${Date.now()}`,
     type: "random",
@@ -2211,7 +2219,7 @@ io.on("connection", (socket) => {
     emitGame(game);
   });
 
-  socket.on("sound:random-turn", () => {
+  socket.on("sound:random-turn", (payload = {}) => {
     const state = sockets.get(socket.id);
     const game = games.get(state?.gameId);
     if (!game || game.status !== "playing") return;
@@ -2232,7 +2240,7 @@ io.on("connection", (socket) => {
     }
     game.randomSoundPushes ||= new Set();
     game.randomSoundPushes.add(randomSoundTurnKey(game, socket.user.id));
-    game.soundEvent = randomTurnSoundEvent(game, { ...socket.user, socketId: socket.id }, color);
+    game.soundEvent = randomTurnSoundEvent(game, { ...socket.user, socketId: socket.id }, color, payload?.soundId);
     game.soundLockedUntil = Date.now() + RANDOM_TURN_SOUND_LOCK_MS;
     scheduleRandomSoundUnlock(game);
     emitGame(game);

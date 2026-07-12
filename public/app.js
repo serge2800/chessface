@@ -45,7 +45,10 @@ const bottomDonkeyMood = document.querySelector("#bottomDonkeyMood");
 const boardWrap = document.querySelector(".board-wrap");
 const boardMeta = document.querySelector("#boardMeta");
 const turnAlarmButton = document.querySelector("#turnAlarmButton");
+const turnCustomSoundControl = document.querySelector("#turnCustomSoundControl");
 const turnRandomSoundButton = document.querySelector("#turnRandomSoundButton");
+const turnCustomSoundSetting = document.querySelector("#turnCustomSoundSetting");
+const turnCustomSoundLabel = document.querySelector("#turnCustomSoundLabel");
 const faceMeshButton = document.querySelector("#faceMeshButton");
 const takebackRequestButton = document.querySelector("#takebackRequestButton");
 const turnStatusButton = document.querySelector("#turnStatusButton");
@@ -160,7 +163,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-emoji-popover-v1";
+const APP_VERSION = "2026-07-13-custom-turn-sound-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -521,7 +524,7 @@ document.querySelector("#resignButton").addEventListener("click", () => {
 });
 turnRandomSoundButton?.addEventListener("click", () => {
   if (!currentGame?.canUseRandomSound) return;
-  socket.emit("sound:random-turn");
+  socket.emit("sound:random-turn", { soundId: soundSettings.turnSound || "random" });
 });
 takebackRequestButton?.addEventListener("click", () => {
   socket?.emit("game:takeback:request");
@@ -694,6 +697,9 @@ if (settingsModal) {
 [checkSoundSetting, checkmateSoundSetting].filter(Boolean).forEach((control) => {
   control.addEventListener("input", updateSoundSettingsFromControls);
 });
+turnCustomSoundSetting?.addEventListener("input", updateSoundSettingsFromControls);
+turnCustomSoundSetting?.addEventListener("focus", loadSoundManifest);
+turnCustomSoundSetting?.addEventListener("pointerdown", loadSoundManifest);
 if (checkSoundSearch) {
   checkSoundSearch.addEventListener("input", () => {
     loadSoundManifest();
@@ -1641,15 +1647,17 @@ function updateTurnRandomSoundButton(game, myTurn) {
   const visible = game.status === "playing";
   const locked = Boolean(game.randomSoundLocked);
   const usable = Boolean(myTurn && game.canUseRandomSound);
-  turnRandomSoundButton.classList.toggle("hidden", !visible);
+  turnCustomSoundControl?.classList.toggle("hidden", !visible);
+  turnRandomSoundButton.classList.toggle("hidden", !visible && !turnCustomSoundControl);
   turnRandomSoundButton.disabled = !usable;
+  if (turnCustomSoundSetting) turnCustomSoundSetting.disabled = !visible;
   turnRandomSoundButton.title = locked
     ? "Wait for the current sound to finish."
     : !myTurn
       ? "You can use this on your turn."
       : usable
         ? ""
-        : "You already used your random sound this turn.";
+        : "You already used your custom sound this turn.";
 }
 
 function updateTurnStatusButton(game, myTurn) {
@@ -4493,19 +4501,22 @@ function normalizeSoundSettings(nextSettings = {}) {
   const validIds = new Set(["none", ...soundOptions().map((sound) => sound.id)]);
   const checkSound = validIds.has(nextSettings.checkSound) ? nextSettings.checkSound : "none";
   const checkmateSound = validIds.has(nextSettings.checkmateSound) ? nextSettings.checkmateSound : "random";
-  return { checkSound, checkmateSound };
+  const turnSound = validIds.has(nextSettings.turnSound) && nextSettings.turnSound !== "none" ? nextSettings.turnSound : "random";
+  return { checkSound, checkmateSound, turnSound };
 }
 
 function loadSoundSettings() {
   return {
     checkSound: localStorage.getItem("chessface_check_sound") || "none",
-    checkmateSound: localStorage.getItem("chessface_checkmate_sound") || "random"
+    checkmateSound: localStorage.getItem("chessface_checkmate_sound") || "random",
+    turnSound: localStorage.getItem("chessface_turn_sound") || "random"
   };
 }
 
 function saveSoundSettings() {
   localStorage.setItem("chessface_check_sound", soundSettings.checkSound);
   localStorage.setItem("chessface_checkmate_sound", soundSettings.checkmateSound);
+  localStorage.setItem("chessface_turn_sound", soundSettings.turnSound);
 }
 
 function createSoundOption(sound) {
@@ -4605,6 +4616,11 @@ function populateSoundDropdown(select, value, options = {}) {
 
 function syncSoundControls() {
   soundSettings = normalizeSoundSettings(soundSettings);
+  populateSoundDropdown(turnCustomSoundSetting, soundSettings.turnSound, {
+    includeNone: false,
+    includeRandom: true
+  });
+  updateTurnCustomSoundLabel();
   populateSoundDropdown(checkSoundSetting, soundSettings.checkSound, {
     includeNone: true,
     includeRandom: true,
@@ -4627,12 +4643,20 @@ function syncSoundControls() {
 
 function updateSoundSettingsFromControls() {
   soundSettings = normalizeSoundSettings({
+    turnSound: turnCustomSoundSetting?.value || "random",
     checkSound: checkSoundSetting?.value || "none",
     checkmateSound: checkmateSoundSetting?.value || "none"
   });
   saveSoundSettings();
+  updateTurnCustomSoundLabel();
   if (me?.id) playerSoundSettings.set(String(me.id), soundSettings);
   sendSoundSettings();
+}
+
+function updateTurnCustomSoundLabel() {
+  if (!turnCustomSoundLabel) return;
+  const selected = soundOptions().find((sound) => sound.id === soundSettings.turnSound);
+  turnCustomSoundLabel.textContent = selected?.label || "Random";
 }
 
 function sendSoundSettings() {

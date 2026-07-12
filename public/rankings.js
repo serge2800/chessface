@@ -26,7 +26,7 @@ function renderNavigation() {
 }
 
 function prefetchDashboard() {
-  const assets = ["/", "/app.js?v=2026-07-13-emoji-popover-v1", "/styles.css?v=2026-07-13-emoji-popover-v1", "/watch.html", "/watch.js?v=2026-07-13-watch-status-camera-v1"];
+  const assets = ["/", "/app.js?v=2026-07-13-custom-turn-sound-v1", "/styles.css?v=2026-07-13-custom-turn-sound-v1", "/watch.html", "/watch.js?v=2026-07-13-watch-status-camera-v1"];
   const run = () => {
     assets.forEach((href) => {
       const link = document.createElement("link");
