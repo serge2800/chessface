@@ -719,16 +719,44 @@ window.ChessFaceSounds = (() => {
 
   let activeSound = null;
   let soundPlaybackToken = 0;
+  let soundContext = null;
+  const decodedSounds = new Map();
+
+  function getSoundContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    soundContext ||= new AudioContext();
+    return soundContext;
+  }
+
+  function unlockAudio() {
+    try {
+      const context = getSoundContext();
+      if (!context) return;
+      if (context.state === "suspended") context.resume().catch(() => {});
+      const source = context.createBufferSource();
+      source.buffer = context.createBuffer(1, 1, 22050);
+      source.connect(context.destination);
+      source.start(0);
+    } catch {}
+  }
 
   function stopActiveSound() {
     if (!activeSound) return;
-    const { audio, context, stopTimer, onEnd } = activeSound;
+    const { audio, context, source, stopTimer, onEnd } = activeSound;
     clearTimeout(stopTimer);
     if (audio) {
       audio.onended = null;
       audio.pause();
       audio.removeAttribute("src");
       audio.load?.();
+    }
+    if (source) {
+      source.onended = null;
+      try {
+        source.stop();
+      } catch {}
+      source.disconnect?.();
     }
     context?.close?.().catch(() => {});
     activeSound = null;
@@ -758,12 +786,12 @@ window.ChessFaceSounds = (() => {
       audio.play().catch((error) => {
         if (soundPlaybackToken !== token) return;
         console.warn("Sound playback failed:", error);
-        playFallbackSound(option.id, token, options);
+        playBufferedSound(option, token, options).catch(() => playFallbackSound(option.id, token, options));
       });
     } catch (error) {
       if (soundPlaybackToken !== token) return;
       console.warn("Sound could not be played:", error);
-      playFallbackSound(option.id, token, options);
+      playBufferedSound(option, token, options).catch(() => playFallbackSound(option.id, token, options));
     }
   }
 
@@ -778,19 +806,64 @@ window.ChessFaceSounds = (() => {
     return option;
   }
 
+  async function decodeSound(option) {
+    if (!option?.file) return null;
+    if (decodedSounds.has(option.id)) return decodedSounds.get(option.id);
+    const context = getSoundContext();
+    if (!context) return null;
+    const response = await fetch(option.file, { cache: "force-cache" });
+    if (!response.ok) throw new Error(`Sound fetch failed: ${response.status}`);
+    const buffer = await response.arrayBuffer();
+    const decoded = await context.decodeAudioData(buffer);
+    decodedSounds.set(option.id, decoded);
+    return decoded;
+  }
+
+  async function playBufferedSound(option, token = soundPlaybackToken, options = {}) {
+    const context = getSoundContext();
+    if (!context || soundPlaybackToken !== token) return;
+    if (context.state === "suspended") await context.resume();
+    if (soundPlaybackToken !== token) return;
+    const decoded = await decodeSound(option);
+    if (!decoded || soundPlaybackToken !== token) return;
+    stopActiveSound();
+    const onStart = typeof options.onStart === "function" ? options.onStart : null;
+    const onEnd = typeof options.onEnd === "function" ? options.onEnd : null;
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    gain.gain.value = 0.7;
+    source.buffer = decoded;
+    source.connect(gain).connect(context.destination);
+    const stopTimer = window.setTimeout(() => {
+      if (soundPlaybackToken === token) stopActiveSound();
+    }, Math.min(8500, Math.max(650, decoded.duration * 1000 + 120)));
+    activeSound = {
+      audio: null,
+      context: null,
+      stopTimer,
+      onEnd,
+      source
+    };
+    source.onended = () => {
+      if (soundPlaybackToken === token) stopActiveSound();
+    };
+    onStart?.();
+    source.start(0);
+  }
+
   function playFallbackSound(soundId, token = soundPlaybackToken, options = {}) {
     try {
       const onStart = typeof options.onStart === "function" ? options.onStart : null;
       const onEnd = typeof options.onEnd === "function" ? options.onEnd : null;
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
+      const context = getSoundContext();
+      if (!context) return;
       if (soundPlaybackToken !== token) return;
       stopActiveSound();
-      const context = new AudioContext();
+      if (context.state === "suspended") context.resume().catch(() => {});
       const stopTimer = window.setTimeout(() => {
         if (soundPlaybackToken === token) stopActiveSound();
       }, 650);
-      activeSound = { audio: null, context, stopTimer, onEnd };
+      activeSound = { audio: null, context: null, stopTimer, onEnd };
       onStart?.();
       const now = context.currentTime;
       const output = context.createGain();
@@ -838,6 +911,7 @@ window.ChessFaceSounds = (() => {
       return soundOptions;
     },
     setSoundOptions,
+    unlockAudio,
     playSound
   };
 })();

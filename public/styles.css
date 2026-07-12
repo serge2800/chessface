@@ -1763,7 +1763,8 @@ input[type="file"] {
 .turn-random-sound {
   min-height: 54px;
   width: min(220px, 42vw);
-  display: block;
+  aspect-ratio: 1024 / 368;
+  display: grid;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -1771,13 +1772,16 @@ input[type="file"] {
   border-radius: 8px;
   background: transparent;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+  contain: layout paint;
+  flex: 0 0 auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .turn-random-sound img {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 1024 / 368;
+  height: 100%;
   border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: 8px;
   box-sizing: border-box;
@@ -1896,6 +1900,7 @@ input[type="file"] {
 .board-side-controls .turn-random-sound {
   width: 100%;
   min-height: 0;
+  height: auto;
 }
 
 .board-side-controls .turn-custom-sound-button {

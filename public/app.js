@@ -166,7 +166,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-tablet-player-card-fix-v1";
+const APP_VERSION = "2026-07-13-mobile-remote-sound-v2";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -312,6 +312,7 @@ const matchmakingSlides = Array.from({ length: 30 }, (_, index) => ({
 }));
 
 document.addEventListener("pointerdown", unlockAudio, { once: true });
+document.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
 
 function forceFreshBuildWhenVersionChanges() {
   const versionKey = "chessface:app-version";
@@ -3819,6 +3820,7 @@ function clearRemoteVideoElements() {
 function unlockAudio() {
   const context = getAudioContext();
   if (context.state === "suspended") context.resume();
+  window.ChessFaceSounds?.unlockAudio?.();
 }
 
 function getAudioContext() {
