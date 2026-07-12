@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-camera-sync-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-status-camera-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -56,6 +56,12 @@
           <div class="watch-board-wrap board-stage">
             <div class="board-side-controls spectator-board-side-controls" aria-label="Watcher chat">
               <section class="game-chat watch-chat-panel watch-spectator-chat" aria-label="Watcher chat">
+                <div class="watch-status-row board-meta">
+                  <div class="turn-card">
+                    <span id="watchMoveStatus">No game selected</span>
+                    <strong id="watchSpectatorCount">0 watching</strong>
+                  </div>
+                </div>
                 <div class="game-chat-head">
                   <div>
                     <p class="eyebrow">Live chat</p>
@@ -79,12 +85,6 @@
             <div class="board watch-board" id="watchBoard" aria-label="Watched chess board"></div>
           </div>
           <div class="watch-player watch-player-bottom board-player board-player-bottom" id="watchWhitePlayer"></div>
-          <div class="watch-status-row board-meta">
-            <div class="turn-card">
-              <span id="watchMoveStatus">No game selected</span>
-              <strong id="watchSpectatorCount">0 watching</strong>
-            </div>
-          </div>
         </section>
         <aside class="watch-side-panel video-panel" aria-label="Live cameras">
           <div class="video-grid watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
@@ -103,6 +103,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-13-watch-camera-sync-v1"></script>
+    <script src="watch.js?v=2026-07-13-watch-status-camera-v1"></script>
   </body>
 </html>

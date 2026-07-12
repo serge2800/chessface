@@ -5707,11 +5707,6 @@ body[data-board-theme="wood"] {
   display: grid;
 }
 
-.spectator-game-layout .watch-status-row {
-  grid-column: 3;
-  margin-top: 0;
-}
-
 .watch-video-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -5764,7 +5759,7 @@ body[data-board-theme="wood"] {
 
 .watch-spectator-chat {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 10px;
   min-height: 0;
   margin-top: 0;
@@ -5773,6 +5768,31 @@ body[data-board-theme="wood"] {
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.34);
   box-shadow: inset 0 0 0 1px rgba(242, 198, 109, 0.08);
+}
+
+.watch-spectator-chat .watch-status-row {
+  margin-top: 0;
+}
+
+.watch-spectator-chat .turn-card {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(242, 198, 109, 0.1);
+}
+
+.watch-spectator-chat .turn-card span,
+.watch-spectator-chat .turn-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-spectator-chat .turn-card strong {
+  color: var(--gold);
 }
 
 .watch-chat-panel.watch-spectator-chat .game-chat-head {
@@ -6045,8 +6065,7 @@ body[data-board-theme="wood"] {
   }
 
   .spectator-game-layout .watch-board-panel > .watch-player-top,
-  .spectator-game-layout .watch-board-panel > .watch-player-bottom,
-  .spectator-game-layout .watch-status-row {
+  .spectator-game-layout .watch-board-panel > .watch-player-bottom {
     grid-column: 1;
   }
 
@@ -6090,7 +6109,6 @@ body[data-board-theme="wood"] {
 
 @media (max-width: 620px) {
   .watch-matchup,
-  .watch-status-row,
   .watch-panel-head {
     display: grid;
   }

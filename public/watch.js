@@ -32,6 +32,8 @@ let watchChat = [];
 let liveKitModulePromise = null;
 let watchLiveKitRoom = null;
 let watchLiveKitGameId = "";
+let watchLiveKitStartGameId = "";
+let watchLiveKitStartPromise = null;
 let watchLiveKitTracks = new Map();
 let watchCameraStatusTimer = null;
 
@@ -339,7 +341,19 @@ async function startWatchLiveKit(game) {
     scheduleWatchCameraStatusCheck();
     return;
   }
-  closeWatchLiveKit();
+  if (watchLiveKitStartPromise && watchLiveKitStartGameId === game.id) return watchLiveKitStartPromise;
+  watchLiveKitStartGameId = game.id;
+  watchLiveKitStartPromise = connectWatchLiveKit(game).finally(() => {
+    if (watchLiveKitStartGameId === game.id) {
+      watchLiveKitStartGameId = "";
+      watchLiveKitStartPromise = null;
+    }
+  });
+  return watchLiveKitStartPromise;
+}
+
+async function connectWatchLiveKit(game) {
+  closeWatchLiveKit({ preserveStart: true });
   watchLiveKitGameId = game.id;
   renderWatchVideoPlaceholders();
   renderWatchVideoStatus("Connecting cameras...");
@@ -367,12 +381,18 @@ async function startWatchLiveKit(game) {
     wireWatchLiveKitRoom(room, LiveKit);
     watchLiveKitRoom = room;
     await room.connect(session.url, session.token, { autoSubscribe: true });
+    if (watchLiveKitGameId !== game.id || watchLiveKitRoom !== room) {
+      try {
+        room.disconnect(false);
+      } catch {}
+      return;
+    }
     syncWatchLiveKitParticipants(room);
     scheduleWatchLiveKitSync(room);
     scheduleWatchCameraStatusCheck();
   } catch (error) {
     console.warn("[ChessFace] Watch cameras unavailable:", error);
-    closeWatchLiveKit();
+    if (watchLiveKitGameId === game.id) closeWatchLiveKit();
     renderWatchVideoStatus("Cameras unavailable");
   }
 }
@@ -548,10 +568,14 @@ function liveKitTrackKind(track) {
   return kind || source || "";
 }
 
-function closeWatchLiveKit() {
+function closeWatchLiveKit({ preserveStart = false } = {}) {
   clearTimeout(watchCameraStatusTimer);
   watchCameraStatusTimer = null;
   watchLiveKitGameId = "";
+  if (!preserveStart) {
+    watchLiveKitStartGameId = "";
+    watchLiveKitStartPromise = null;
+  }
   if (!watchLiveKitRoom) return;
   try {
     watchLiveKitRoom.disconnect(false);
