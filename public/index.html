@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-13-random-custom-sounds-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-custom-sound-split-v1" />
   </head>
   <body>
     <main class="shell">
@@ -271,11 +271,15 @@
                   <img src="assets/random_sound.png" alt="Random sound" />
                 </button>
                 <div class="turn-custom-sound hidden" id="turnCustomSoundControl">
-                  <button type="button" class="turn-custom-sound-button" id="turnCustomSoundButton" aria-label="One push per move: play selected custom sound">
-                    <span>Custom sound</span>
-                    <strong id="turnCustomSoundLabel">Random</strong>
-                  </button>
+                  <div class="turn-custom-sound-split">
+                    <button type="button" class="turn-custom-sound-button" id="turnCustomSoundButton" aria-label="One push per move: play selected custom sound">
+                      <span>Custom sound</span>
+                      <strong id="turnCustomSoundLabel">Random</strong>
+                    </button>
+                    <button type="button" class="turn-custom-sound-menu-button" id="turnCustomSoundMenuButton" aria-label="Choose custom sound" aria-expanded="false">▾</button>
+                  </div>
                   <select id="turnCustomSoundSetting" aria-label="Choose custom sound"></select>
+                  <div class="turn-custom-sound-menu hidden" id="turnCustomSoundMenu" role="menu" aria-label="Custom sound choices"></div>
                 </div>
                 <button type="button" class="face-mesh-button hidden" id="faceMeshButton" aria-pressed="false">Face mesh</button>
                 <button type="button" class="takeback-request-button hidden" id="takebackRequestButton">Takeback request</button>
@@ -516,6 +520,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-13-random-custom-sounds-v1"></script>
+    <script src="app.js?v=2026-07-13-custom-sound-split-v1"></script>
   </body>
 </html>

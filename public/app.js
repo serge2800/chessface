@@ -48,8 +48,10 @@ const turnAlarmButton = document.querySelector("#turnAlarmButton");
 const turnRandomSoundButton = document.querySelector("#turnRandomSoundButton");
 const turnCustomSoundControl = document.querySelector("#turnCustomSoundControl");
 const turnCustomSoundButton = document.querySelector("#turnCustomSoundButton");
+const turnCustomSoundMenuButton = document.querySelector("#turnCustomSoundMenuButton");
 const turnCustomSoundSetting = document.querySelector("#turnCustomSoundSetting");
 const turnCustomSoundLabel = document.querySelector("#turnCustomSoundLabel");
+const turnCustomSoundMenu = document.querySelector("#turnCustomSoundMenu");
 const faceMeshButton = document.querySelector("#faceMeshButton");
 const takebackRequestButton = document.querySelector("#takebackRequestButton");
 const turnStatusButton = document.querySelector("#turnStatusButton");
@@ -164,7 +166,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-random-custom-sounds-v1";
+const APP_VERSION = "2026-07-13-custom-sound-split-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -532,6 +534,17 @@ turnCustomSoundButton?.addEventListener("click", () => {
   if (!currentGame?.canUseRandomSound) return;
   socket.emit("sound:random-turn", { soundId: soundSettings.turnSound || "random" });
 });
+turnCustomSoundMenuButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (turnCustomSoundMenuButton.disabled) return;
+  loadSoundManifest();
+  toggleTurnCustomSoundMenu();
+});
+document.addEventListener("click", (event) => {
+  if (!turnCustomSoundMenu || turnCustomSoundMenu.classList.contains("hidden")) return;
+  if (turnCustomSoundControl?.contains(event.target)) return;
+  closeTurnCustomSoundMenu();
+});
 takebackRequestButton?.addEventListener("click", () => {
   socket?.emit("game:takeback:request");
 });
@@ -705,7 +718,6 @@ if (settingsModal) {
 });
 turnCustomSoundSetting?.addEventListener("input", updateSoundSettingsFromControls);
 turnCustomSoundSetting?.addEventListener("focus", loadSoundManifest);
-turnCustomSoundSetting?.addEventListener("pointerdown", loadSoundManifest);
 if (checkSoundSearch) {
   checkSoundSearch.addEventListener("input", () => {
     loadSoundManifest();
@@ -1657,7 +1669,9 @@ function updateTurnRandomSoundButton(game, myTurn) {
   turnCustomSoundControl?.classList.toggle("hidden", !visible);
   if (turnRandomSoundButton) turnRandomSoundButton.disabled = !usable;
   if (turnCustomSoundButton) turnCustomSoundButton.disabled = !usable;
+  if (turnCustomSoundMenuButton) turnCustomSoundMenuButton.disabled = !visible;
   if (turnCustomSoundSetting) turnCustomSoundSetting.disabled = !visible;
+  if (!visible) closeTurnCustomSoundMenu();
   const title = locked
     ? "Wait for the current sound to finish."
     : !myTurn
@@ -1667,6 +1681,7 @@ function updateTurnRandomSoundButton(game, myTurn) {
         : "You already used a sound this turn.";
   if (turnRandomSoundButton) turnRandomSoundButton.title = title || "Play a random sound.";
   if (turnCustomSoundButton) turnCustomSoundButton.title = title || "Play your selected custom sound.";
+  if (turnCustomSoundMenuButton) turnCustomSoundMenuButton.title = visible ? "Choose custom sound." : "";
 }
 
 function updateTurnStatusButton(game, myTurn) {
@@ -4611,6 +4626,70 @@ function renderSoundSearchResults(results, select, value, options = {}) {
   results.classList.remove("hidden");
 }
 
+function toggleTurnCustomSoundMenu(forceOpen = null) {
+  if (!turnCustomSoundMenu) return;
+  const open = forceOpen ?? turnCustomSoundMenu.classList.contains("hidden");
+  turnCustomSoundMenu.classList.toggle("hidden", !open);
+  turnCustomSoundMenuButton?.setAttribute("aria-expanded", String(open));
+  if (open) renderTurnCustomSoundMenu();
+}
+
+function closeTurnCustomSoundMenu() {
+  if (!turnCustomSoundMenu) return;
+  turnCustomSoundMenu.classList.add("hidden");
+  turnCustomSoundMenuButton?.setAttribute("aria-expanded", "false");
+}
+
+function renderTurnCustomSoundMenu() {
+  if (!turnCustomSoundMenu) return;
+  const selectedValue = soundSettings.turnSound || "random";
+  turnCustomSoundMenu.innerHTML = "";
+
+  const randomButton = createTurnCustomSoundMenuButton({ id: "random", label: "Random", category: "Custom sound" }, selectedValue);
+  turnCustomSoundMenu.append(randomButton);
+
+  const sounds = groupedSoundOptions();
+  if (!sounds.length) {
+    const empty = document.createElement("div");
+    empty.className = "turn-custom-sound-empty";
+    empty.textContent = "Loading sounds...";
+    turnCustomSoundMenu.append(empty);
+    return;
+  }
+
+  soundGroups(sounds).forEach((items, category) => {
+    const heading = document.createElement("div");
+    heading.className = "turn-custom-sound-category";
+    heading.textContent = category;
+    turnCustomSoundMenu.append(heading);
+    items.forEach((sound) => turnCustomSoundMenu.append(createTurnCustomSoundMenuButton(sound, selectedValue)));
+  });
+}
+
+function createTurnCustomSoundMenuButton(sound, selectedValue) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "turn-custom-sound-option";
+  button.dataset.soundId = sound.id;
+  button.textContent = sound.label;
+  button.setAttribute("role", "menuitemradio");
+  button.setAttribute("aria-checked", sound.id === selectedValue ? "true" : "false");
+  button.addEventListener("click", () => {
+    if (turnCustomSoundSetting) turnCustomSoundSetting.value = sound.id;
+    soundSettings = normalizeSoundSettings({
+      ...soundSettings,
+      turnSound: sound.id
+    });
+    saveSoundSettings();
+    updateTurnCustomSoundLabel();
+    renderTurnCustomSoundMenu();
+    closeTurnCustomSoundMenu();
+    if (me?.id) playerSoundSettings.set(String(me.id), soundSettings);
+    sendSoundSettings();
+  });
+  return button;
+}
+
 function populateSoundDropdown(select, value, options = {}) {
   if (!select) return;
   const query = String(options.query || "").trim().toLowerCase();
@@ -4642,6 +4721,7 @@ function syncSoundControls() {
     includeRandom: true
   });
   updateTurnCustomSoundLabel();
+  renderTurnCustomSoundMenu();
   populateSoundDropdown(checkSoundSetting, soundSettings.checkSound, {
     includeNone: true,
     includeRandom: true,
@@ -4670,6 +4750,7 @@ function updateSoundSettingsFromControls() {
   });
   saveSoundSettings();
   updateTurnCustomSoundLabel();
+  renderTurnCustomSoundMenu();
   if (me?.id) playerSoundSettings.set(String(me.id), soundSettings);
   sendSoundSettings();
 }
