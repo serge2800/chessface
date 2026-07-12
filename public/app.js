@@ -149,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-random-sound-v1";
+const APP_VERSION = "2026-07-12-responsive-donkeys-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -1937,17 +1937,16 @@ async function setDonkeyMood(video, mood) {
   const requestId = `${mood.id}:${Date.now()}:${Math.random()}`;
   video.dataset.pendingMood = mood.id;
   video.dataset.moodRequest = requestId;
+  video.dataset.mood = mood.id;
+  video.classList.add("is-changing");
+  video.src = mood.src;
+  video.setAttribute("aria-label", mood.label + " position mood");
+  video.load();
+  armDonkeyVideoWatchdog(video);
   try {
-    await preloadDonkeyVideo(mood.src);
+    await waitForDonkeyVideoReady(video, 1200).catch(() => {});
     if (video.dataset.moodRequest !== requestId) return;
-    video.dataset.mood = mood.id;
-    video.classList.add("is-changing");
-    video.src = mood.src;
-    video.setAttribute("aria-label", mood.label + " position mood");
-    video.load();
-    await waitForDonkeyVideoReady(video, 700).catch(() => {});
     await video.play().catch(() => {});
-    armDonkeyVideoWatchdog(video);
   } catch (_error) {
     if (video.dataset.moodRequest === requestId && !video.src.endsWith(DONKEY_VIDEO_FALLBACK_SRC)) {
       video.src = DONKEY_VIDEO_FALLBACK_SRC;
