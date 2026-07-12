@@ -88,6 +88,12 @@ statsTabs?.addEventListener("click", (event) => {
 });
 
 async function bootProfile() {
+  const requestedGameId = new URLSearchParams(location.search).get("game");
+  if (isAnalysisPage && requestedGameId) {
+    await bootSharedAnalysisPage(requestedGameId);
+    return;
+  }
+
   if (!token) {
     location.href = "/";
     return;
@@ -114,6 +120,50 @@ async function bootProfile() {
   }
   renderChart();
   renderGames();
+}
+
+async function bootSharedAnalysisPage(gameId) {
+  const [profileResult, gameResponse] = await Promise.all([
+    token
+      ? fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((response) => response.ok ? response.json() : null)
+        .catch(() => null)
+      : Promise.resolve(null),
+    fetch(`/api/public/games/${encodeURIComponent(gameId)}`)
+  ]);
+
+  const gameData = await gameResponse.json().catch(() => ({}));
+  if (!gameResponse.ok || !gameData.game) {
+    renderPublicAnalysisHeader();
+    reviewPanel.innerHTML = '<p class="analysis-status">This shared game could not be found.</p>';
+    return;
+  }
+
+  me = profileResult?.user || {
+    id: gameData.game.players?.white?.id || "public-viewer",
+    username: "Viewer",
+    fullName: "Shared game analysis",
+    avatarUrl: "/app-icon.svg",
+    countryCode: "OTHER",
+    rating: 0,
+    gamesPlayed: 0,
+    friendsCount: 0,
+    ratingRd: 0,
+    countryName: "Other"
+  };
+  games = [gameData.game];
+  if (profileResult?.user) renderProfile();
+  else renderPublicAnalysisHeader(gameData.game);
+  renderAnalysisPage();
+}
+
+function renderPublicAnalysisHeader(game) {
+  profileAvatar.src = "/app-icon.svg";
+  profileFlag.textContent = "";
+  profileName.textContent = "ChessFace";
+  profileMeta.textContent = game ? "Shared game analysis" : "Public analysis";
+  [profileLogoutButton, friendsButton, editProfileButton].forEach((button) => button?.classList.add("hidden"));
+  document.querySelector("#analysisProfileButton")?.classList.add("hidden");
 }
 
 function renderProfile() {
@@ -265,7 +315,8 @@ function appendSvg(tag, attrs, text) {
 function renderReview(game) {
   const previousGameId = selectedReviewGame?.id;
   selectedReviewGame = game;
-  const color = game.players.white.id === me.id ? "white" : "black";
+  const viewerIsBlack = game.players.black.id === me?.id;
+  const color = viewerIsBlack ? "black" : "white";
   const opponent = color === "white" ? game.players.black : game.players.white;
   const change = game.ratingChanges?.[color]?.change || 0;
   const positions = Array.isArray(game.positions) && game.positions.length ? game.positions : [game.fen].filter(Boolean);

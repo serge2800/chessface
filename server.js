@@ -1478,6 +1478,13 @@ app.get("/api/games", requireSession, (req, res) => {
   res.json({ games: records });
 });
 
+app.get("/api/public/games/:id", (req, res) => {
+  const gameId = String(req.params.id || "").trim();
+  const record = readGameRecords().find((game) => game.id === gameId);
+  if (!record) return res.status(404).json({ error: "Game not found." });
+  res.json({ game: withReplay(record) });
+});
+
 app.get("/api/friends", requireSession, requireRegisteredUser, (req, res) => {
   const users = readUsers();
   const me = users.find((user) => user.id === req.user.id);
