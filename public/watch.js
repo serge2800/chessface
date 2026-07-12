@@ -8,8 +8,6 @@ const watchMoveStatus = document.querySelector("#watchMoveStatus");
 const watchSpectatorCount = document.querySelector("#watchSpectatorCount");
 const watchEvalBarFill = document.querySelector("#watchEvalBarFill");
 const watchEvalBarLabel = document.querySelector("#watchEvalBarLabel");
-const watchTopDonkeyMood = document.querySelector("#watchTopDonkeyMood");
-const watchBottomDonkeyMood = document.querySelector("#watchBottomDonkeyMood");
 const watchWhiteVideo = document.querySelector("#watchWhiteVideo");
 const watchBlackVideo = document.querySelector("#watchBlackVideo");
 const watchWhiteVideoLabel = document.querySelector("#watchWhiteVideoLabel");
@@ -24,19 +22,6 @@ const watchLoginLink = document.querySelector("#watchLoginLink");
 const refreshWatchButton = document.querySelector("#refreshWatchButton");
 
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
-const WATCH_DONKEY_MOODS = [
-  { id: "10-losing-crushed", webm: "/assets/eval-optimized/10.webm", mp4: "/assets/eval-optimized/10.mp4", label: "Losing badly", max: -800 },
-  { id: "9-losing-horrible", webm: "/assets/eval-optimized/9.webm", mp4: "/assets/eval-optimized/9.mp4", label: "Very bad", max: -500 },
-  { id: "8-losing-danger", webm: "/assets/eval-optimized/8.webm", mp4: "/assets/eval-optimized/8.mp4", label: "In danger", max: -300 },
-  { id: "7-losing-worse", webm: "/assets/eval-optimized/7.webm", mp4: "/assets/eval-optimized/7.mp4", label: "Worse", max: -150 },
-  { id: "6-losing-slightly", webm: "/assets/eval-optimized/6.webm", mp4: "/assets/eval-optimized/6.mp4", label: "Slightly worse", max: -30 },
-  { id: "5-balanced", webm: "/assets/eval-optimized/5.webm", mp4: "/assets/eval-optimized/5.mp4", label: "Balanced", max: 30 },
-  { id: "4-winning-slightly", webm: "/assets/eval-optimized/4.webm", mp4: "/assets/eval-optimized/4.mp4", label: "Slightly better", max: 150 },
-  { id: "3-winning-good", webm: "/assets/eval-optimized/3.webm", mp4: "/assets/eval-optimized/3.mp4", label: "Good", max: 300 },
-  { id: "2-winning-very-good", webm: "/assets/eval-optimized/2.webm", mp4: "/assets/eval-optimized/2.mp4", label: "Very good", max: 500 },
-  { id: "1-winning-happiest", webm: "/assets/eval-optimized/1.webm", mp4: "/assets/eval-optimized/1.mp4", label: "Winning big", max: Infinity }
-];
-const WATCH_DONKEY_FALLBACK_MOOD = WATCH_DONKEY_MOODS[5];
 const WATCH_PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900 };
 const token = localStorage.getItem("chessface:token");
 let socket = null;
@@ -48,9 +33,6 @@ let liveKitModulePromise = null;
 let watchLiveKitRoom = null;
 let watchLiveKitTracks = new Map();
 let watchCameraStatusTimer = null;
-let watchDonkeyFormat = null;
-let watchDonkeyWarmupStarted = false;
-const watchDonkeyPreloads = new Map();
 
 renderNavigation();
 
@@ -251,7 +233,6 @@ function renderSelectedGame() {
   renderWatchChatState();
   renderWatchChat();
   renderWatchVideoPlaceholders();
-  scheduleWatchDonkeyWarmup();
 }
 
 function showWatchNotice(message) {
@@ -267,7 +248,6 @@ function updateWatchEvaluation(whiteCentipawns) {
     const pawns = Math.abs(value / 100).toFixed(1);
     watchEvalBarLabel.textContent = value >= 0 ? `+${pawns}` : `-${pawns}`;
   }
-  updateWatchDonkeyMoods(value);
 }
 
 function materialCentipawnsFromFen(fen) {
@@ -279,142 +259,6 @@ function materialCentipawnsFromFen(fen) {
     score += char === char.toUpperCase() ? value : -value;
   }
   return score;
-}
-
-function updateWatchDonkeyMoods(whiteCentipawns) {
-  setWatchDonkeyMood(watchTopDonkeyMood, watchDonkeyMoodForColor("black", whiteCentipawns));
-  setWatchDonkeyMood(watchBottomDonkeyMood, watchDonkeyMoodForColor("white", whiteCentipawns));
-}
-
-function watchDonkeyMoodForColor(color, whiteCentipawns) {
-  const playerCentipawns = color === "black" ? -whiteCentipawns : whiteCentipawns;
-  return WATCH_DONKEY_MOODS.find((mood) => playerCentipawns <= mood.max) || WATCH_DONKEY_FALLBACK_MOOD;
-}
-
-async function setWatchDonkeyMood(video, mood) {
-  if (!video || !mood) return;
-  ensureWatchDonkeyVideoPair(video);
-  const slot = video.parentElement;
-  if (!slot) return;
-  const active = activeWatchDonkeyVideo(video);
-  if (active?.dataset.mood === mood.id) return;
-  const next = inactiveWatchDonkeyVideo(video) || active;
-  const source = watchDonkeySource(mood);
-  const requestId = `${mood.id}:${Date.now()}:${Math.random()}`;
-  slot.dataset.moodRequest = requestId;
-  next.dataset.mood = mood.id;
-  next.setAttribute("aria-label", mood.label + " position mood");
-  next.classList.add("is-changing");
-  if (!next.currentSrc.endsWith(source) && !next.src.endsWith(source)) {
-    next.src = source;
-    next.load();
-  }
-  const ready = await waitForWatchDonkeyReady(next, 1200);
-  if (slot.dataset.moodRequest !== requestId) return;
-  if (!ready) return;
-  try {
-    next.currentTime = 0;
-  } catch (_) {}
-  next.play?.().catch(() => {});
-  next.classList.add("is-active");
-  active?.classList.remove("is-active");
-  window.setTimeout(() => {
-    next.classList.remove("is-changing");
-    if (active && !active.classList.contains("is-active")) active.pause?.();
-  }, 180);
-}
-
-function ensureWatchDonkeyVideoPair(video) {
-  if (!video || video.dataset.bufferReady) return;
-  const slot = video.parentElement;
-  if (!slot) return;
-  video.classList.add("is-active");
-  video.preload = "auto";
-  const buffer = video.cloneNode(false);
-  buffer.removeAttribute("id");
-  buffer.removeAttribute("aria-label");
-  buffer.classList.remove("is-active", "is-changing");
-  buffer.classList.add("is-buffer");
-  buffer.muted = true;
-  buffer.autoplay = true;
-  buffer.loop = true;
-  buffer.playsInline = true;
-  buffer.preload = "auto";
-  buffer.addEventListener("error", () => recoverWatchDonkey(buffer));
-  video.dataset.bufferReady = "1";
-  buffer.dataset.bufferReady = "1";
-  slot.appendChild(buffer);
-}
-
-function activeWatchDonkeyVideo(video) {
-  return video?.parentElement?.querySelector(".eval-donkey-mood.is-active") || video;
-}
-
-function inactiveWatchDonkeyVideo(video) {
-  return Array.from(video?.parentElement?.querySelectorAll(".eval-donkey-mood") || []).find((candidate) => !candidate.classList.contains("is-active"));
-}
-
-function waitForWatchDonkeyReady(video, timeoutMs = 1200) {
-  if (!video) return Promise.resolve(false);
-  if (video.readyState >= 2) return Promise.resolve(true);
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (ready) => {
-      if (done) return;
-      done = true;
-      video.removeEventListener("canplay", markReady);
-      video.removeEventListener("loadeddata", markReady);
-      video.removeEventListener("error", markFailed);
-      resolve(Boolean(ready) || video.readyState >= 2);
-    };
-    const markReady = () => finish(true);
-    const markFailed = () => finish(false);
-    video.addEventListener("canplay", markReady, { once: true });
-    video.addEventListener("loadeddata", markReady, { once: true });
-    video.addEventListener("error", markFailed, { once: true });
-    window.setTimeout(markFailed, timeoutMs);
-  });
-}
-
-function scheduleWatchDonkeyWarmup() {
-  if (watchDonkeyWarmupStarted) return;
-  watchDonkeyWarmupStarted = true;
-  const run = () => WATCH_DONKEY_MOODS.map(watchDonkeySource).forEach(preloadWatchDonkey);
-  if ("requestIdleCallback" in window) window.setTimeout(() => window.requestIdleCallback(run, { timeout: 2500 }), 400);
-  else window.setTimeout(run, 900);
-}
-
-function watchDonkeySource(mood) {
-  if (!watchDonkeyFormat) {
-    const probe = document.createElement("video");
-    watchDonkeyFormat = probe.canPlayType('video/webm; codecs="vp9"') ? "webm" : "mp4";
-  }
-  return mood?.[watchDonkeyFormat] || mood?.mp4 || WATCH_DONKEY_FALLBACK_MOOD.mp4;
-}
-
-function preloadWatchDonkey(src) {
-  if (!src || watchDonkeyPreloads.has(src)) return;
-  const video = document.createElement("video");
-  video.muted = true;
-  video.loop = true;
-  video.playsInline = true;
-  video.preload = "auto";
-  video.src = src;
-  video.load();
-  watchDonkeyPreloads.set(src, video);
-}
-
-[watchTopDonkeyMood, watchBottomDonkeyMood].forEach((video) => {
-  video?.addEventListener("error", () => recoverWatchDonkey(video));
-});
-
-function recoverWatchDonkey(video) {
-  const fallback = watchDonkeySource(WATCH_DONKEY_FALLBACK_MOOD);
-  if (!video || video.src.endsWith(fallback)) return;
-  video.src = fallback;
-  video.dataset.mood = WATCH_DONKEY_FALLBACK_MOOD.id;
-  video.load();
-  video.play?.().catch(() => {});
 }
 
 function addWatchChatMessage(message) {

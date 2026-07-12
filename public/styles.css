@@ -5635,37 +5635,24 @@ body[data-board-theme="wood"] {
 }
 
 .spectator-board-side-controls {
-  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
-  pointer-events: none;
-}
-
-.spectator-board-side-controls .board-animation-slots {
-  top: calc(-1 * var(--board-top-lift));
-  bottom: auto;
-  left: 50%;
-  width: min(150px, 100%);
   height: calc(var(--play-surface-size) + var(--board-top-lift));
-  transform: translateX(-50%);
+  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
+  margin-top: calc(-1 * var(--board-top-lift) + 5px);
+  padding-top: 0;
+  pointer-events: auto;
+  transform: none;
+  align-content: stretch;
+  gap: 0;
 }
 
-.spectator-board-side-controls .board-animation-slot {
-  left: 50%;
-  width: min(146px, 100%);
-  height: 136px;
-  transform: translateX(-50%);
-}
-
-.spectator-board-side-controls .board-animation-slot-top {
-  top: 88px;
-}
-
-.spectator-board-side-controls .board-animation-slot-bottom {
-  top: auto;
-  bottom: 170px;
+.spectator-board-side-controls .watch-spectator-chat {
+  width: 100%;
+  height: 100%;
 }
 
 .spectator-game-layout .watch-board-wrap {
-  grid-template-columns: minmax(150px, 190px) minmax(0, auto);
+  grid-template-columns: minmax(250px, 310px) minmax(0, auto);
+  column-gap: 12px;
   width: 100%;
   margin: 0;
 }
@@ -5736,6 +5723,42 @@ body[data-board-theme="wood"] {
   background: transparent;
   padding: 0;
   box-shadow: none;
+}
+
+.watch-spectator-chat {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(242, 198, 109, 0.08);
+}
+
+.watch-chat-panel.watch-spectator-chat .game-chat-head {
+  min-width: 0;
+}
+
+.watch-chat-panel.watch-spectator-chat .game-chat-head h3 {
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.watch-chat-panel.watch-spectator-chat .game-chat-messages {
+  height: auto;
+  min-height: 0;
+}
+
+.watch-chat-panel.watch-spectator-chat .game-chat-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.watch-chat-panel.watch-spectator-chat .game-chat-form button {
+  width: 100%;
 }
 
 .watch-game-card {

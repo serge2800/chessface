@@ -11,7 +11,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-13-donkey-double-buffer-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-13-watch-chat-rail-v1" />
   </head>
   <body class="watch-page">
     <main class="watch-shell">
@@ -54,16 +54,23 @@
           </div>
           <div class="watch-player watch-player-top board-player board-player-top" id="watchBlackPlayer"></div>
           <div class="watch-board-wrap board-stage">
-            <div class="board-side-controls spectator-board-side-controls" aria-label="Spectator evaluation">
-              <div class="board-animation-slots" aria-label="Evaluation animation slots">
-                <div class="board-animation-slot board-animation-slot-top">
-                  <video id="watchTopDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Top player evaluation mood"></video>
+            <div class="board-side-controls spectator-board-side-controls" aria-label="Watcher chat">
+              <section class="game-chat watch-chat-panel watch-spectator-chat" aria-label="Watcher chat">
+                <div class="game-chat-head">
+                  <div>
+                    <p class="eyebrow">Live chat</p>
+                    <h3>Players and watchers</h3>
+                  </div>
+                  <span id="watchChatStatus">Live</span>
                 </div>
-                <div class="board-animation-slot board-animation-slot-middle" aria-hidden="true"></div>
-                <div class="board-animation-slot board-animation-slot-bottom">
-                  <video id="watchBottomDonkeyMood" class="eval-donkey-mood" muted autoplay loop playsinline preload="none" aria-label="Bottom player evaluation mood"></video>
+                <div class="game-chat-messages" id="watchChatMessages" aria-live="polite">
+                  <p class="chat-empty">Open a game to join the conversation.</p>
                 </div>
-              </div>
+                <form class="game-chat-form" id="watchChatForm">
+                  <input id="watchChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." />
+                  <button type="submit">Send</button>
+                </form>
+              </section>
             </div>
             <div class="eval-bar watch-eval-bar" id="watchEvalBar" aria-label="Position evaluation">
               <div class="eval-bar-fill" id="watchEvalBarFill"></div>
@@ -79,7 +86,7 @@
             </div>
           </div>
         </section>
-        <aside class="watch-side-panel video-panel" aria-label="Live cameras and chat">
+        <aside class="watch-side-panel video-panel" aria-label="Live cameras">
           <div class="video-grid watch-video-grid" id="watchVideoGrid" aria-label="Player cameras">
             <div class="video-tile watch-video-tile" data-watch-video="white">
               <video id="watchWhiteVideo" autoplay playsinline muted></video>
@@ -90,28 +97,12 @@
               <span id="watchBlackVideoLabel">Black camera</span>
             </div>
           </div>
-          <section class="game-chat watch-chat-panel" aria-label="Watcher chat">
-            <div class="game-chat-head">
-              <div>
-                <p class="eyebrow">Live chat</p>
-                <h3>Players and watchers</h3>
-              </div>
-              <span id="watchChatStatus">Live</span>
-            </div>
-            <div class="game-chat-messages" id="watchChatMessages" aria-live="polite">
-              <p class="chat-empty">Open a game to join the conversation.</p>
-            </div>
-            <form class="game-chat-form" id="watchChatForm">
-              <input id="watchChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." />
-              <button type="submit">Send</button>
-            </form>
-          </section>
         </aside>
       </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="pieces.js"></script>
-    <script src="watch.js?v=2026-07-13-donkey-double-buffer-v1"></script>
+    <script src="watch.js?v=2026-07-13-watch-chat-rail-v1"></script>
   </body>
 </html>
