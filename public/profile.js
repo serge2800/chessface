@@ -239,7 +239,9 @@ function renderAnalysisPage() {
   }
   selectedReviewPly = 0;
   renderReview(activeGame);
-  setTimeout(() => document.querySelector("#analyzeGameButton")?.click(), 150);
+  if (new URLSearchParams(location.search).get("analyze") === "1" && !getCachedReviewAnalysis(activeGame)) {
+    setTimeout(() => document.querySelector("#analyzeGameButton")?.click(), 150);
+  }
 }
 
 function openAnalysisWindow(game) {
@@ -313,7 +315,7 @@ function renderReview(game) {
   const change = game.ratingChanges?.[color]?.change || 0;
   const positions = Array.isArray(game.positions) && game.positions.length ? game.positions : [game.fen].filter(Boolean);
   const moves = Array.isArray(game.moves) ? game.moves : [];
-  const cachedAnalysis = game.analysis || null;
+  const cachedAnalysis = getCachedReviewAnalysis(game);
   const isFocusedAnalysis = isAnalysisPage;
   if (previousGameId && previousGameId !== game.id) reviewBoardOrientation = null;
   if (!reviewBoardOrientation) reviewBoardOrientation = color;
@@ -370,7 +372,7 @@ function renderReview(game) {
     document.querySelector("#reviewPrevButton").disabled = selectedReviewPly === 0;
     document.querySelector("#reviewNextButton").disabled = selectedReviewPly >= positions.length - 1;
     document.querySelector("#reviewEndButton").disabled = selectedReviewPly >= positions.length - 1;
-    updateCurrentMoveAnalysis(game.analysis || cachedAnalysis, selectedReviewPly);
+    updateCurrentMoveAnalysis(getCachedReviewAnalysis(game), selectedReviewPly);
   };
   document.querySelector("#analyzeGameButton").addEventListener("click", () => {
     if (isAnalysisPage) analyzeGame(game);
@@ -458,6 +460,8 @@ async function analyzeGame(game) {
     const moveReviews = reviewMoves.map((move, index) => classifyMove(move, positionResults[index], positionResults[index + 1], reviewPositions[index]));
     const analysis = summarizeAnalysis(moveReviews);
     game.analysis = analysis;
+    game.reviewAnalysis = analysis;
+    saveSharedReviewAnalysis(game.id, analysis);
     if (analysisRunId === runId && selectedReviewGame?.id === game.id) {
       panel.innerHTML = renderAnalysisHtml(analysis);
       bindAnalysisMoveClicks(game);
@@ -468,6 +472,46 @@ async function analyzeGame(game) {
   } finally {
     button.disabled = false;
   }
+}
+
+function getCachedReviewAnalysis(game) {
+  return game?.analysis || game?.reviewAnalysis || analysisFromAccuracyAnalysis(game?.accuracyAnalysis) || null;
+}
+
+function analysisFromAccuracyAnalysis(accuracyAnalysis) {
+  if (!accuracyAnalysis?.moves?.length) return null;
+  const counts = { Brilliant: 0, Best: 0, Excellent: 0, Good: 0, Inaccuracy: 0, Mistake: 0, Blunder: 0 };
+  const moves = accuracyAnalysis.moves.map((move) => {
+    const label = move.classification === "Excellent" ? "Excellent" : move.classification || "Good";
+    if (counts[label] !== undefined) counts[label] += 1;
+    return {
+      index: move.index,
+      san: move.san,
+      color: move.color,
+      playedMove: `${move.from || ""}${move.to || ""}`,
+      bestMove: move.bestMove,
+      lines: [],
+      centipawnLoss: Number(move.centipawnLoss || 0),
+      evalGain: 0,
+      label,
+      beforeEval: move.beforeEval,
+      afterEval: move.afterEval
+    };
+  });
+  const accuracy = Math.round(((accuracyAnalysis.white?.accuracy || 0) + (accuracyAnalysis.black?.accuracy || 0)) / 2);
+  const averageLoss = moves.length
+    ? Math.round(moves.reduce((sum, move) => sum + Math.min(500, move.centipawnLoss), 0) / moves.length)
+    : 0;
+  return { accuracy, averageLoss, counts, moves, source: "saved-accuracy" };
+}
+
+function saveSharedReviewAnalysis(gameId, analysis) {
+  if (!gameId || !analysis) return;
+  fetch(`/api/public/games/${encodeURIComponent(gameId)}/analysis`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analysis })
+  }).catch(() => {});
 }
 
 function bindAnalysisMoveClicks(game) {

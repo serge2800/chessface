@@ -211,7 +211,7 @@ function readSoundManifest() {
   return items;
 }
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.set("trust proxy", 1);
 app.use("/uploads", express.static(UPLOAD_DIR));
 if (fs.existsSync(SOUND_SOURCE_DIR)) app.use("/assets/sounds", express.static(SOUND_SOURCE_DIR));
@@ -726,6 +726,21 @@ function saveAccuracyAnalysis(game, analysis) {
     record.accuracyAnalysis = game.accuracyAnalysis;
     writeGameRecords(records);
   }
+}
+
+function saveReviewAnalysis(gameId, analysis) {
+  if (!gameId || !analysis || typeof analysis !== "object") return false;
+  if (!Array.isArray(analysis.moves) || analysis.moves.length > 300) return false;
+  const records = readGameRecords();
+  const record = records.find((item) => item.id === gameId);
+  if (!record) return false;
+  if (record.reviewAnalysis) return true;
+  record.reviewAnalysis = {
+    ...analysis,
+    savedAt: new Date().toISOString()
+  };
+  writeGameRecords(records);
+  return true;
 }
 
 function gamePayload(game, viewerId) {
@@ -1483,6 +1498,14 @@ app.get("/api/public/games/:id", (req, res) => {
   const record = readGameRecords().find((game) => game.id === gameId);
   if (!record) return res.status(404).json({ error: "Game not found." });
   res.json({ game: withReplay(record) });
+});
+
+app.post("/api/public/games/:id/analysis", (req, res) => {
+  const gameId = String(req.params.id || "").trim();
+  const analysis = req.body?.analysis;
+  if (!analysis || typeof analysis !== "object") return res.status(400).json({ error: "Missing analysis." });
+  if (!saveReviewAnalysis(gameId, analysis)) return res.status(404).json({ error: "Game not found." });
+  res.json({ ok: true });
 });
 
 app.get("/api/friends", requireSession, requireRegisteredUser, (req, res) => {
