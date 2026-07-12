@@ -166,13 +166,12 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-custom-sound-menu-zfix-v1";
+const APP_VERSION = "2026-07-13-remove-wait-cue-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
 const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
-const THINKING_DELAY_MS = 20000;
 const MATCH_INTRO_MS = 2000;
 const MATCH_INTRO_SOUND_URL = "/assets/ninja-intro.m4a?v=2026-07-13";
 const TIME_TROUBLE_SECONDS = 10;
@@ -206,8 +205,6 @@ let liveEvalSourceIndex = 0;
 let accuracyAnalysisServicePromise = null;
 let lastFaceZoomEval = null;
 let lastFaceZoomMoveKey = "";
-let thinkingTurnKey = "";
-let thinkingTurnStartedAt = 0;
 let lastHeartbeatAt = 0;
 let lastHeartbeatKey = "";
 const LIVE_STOCKFISH_SOURCES = [
@@ -1228,9 +1225,6 @@ function renderGame(game) {
     boardHistoryIndex = null;
     lastFaceZoomEval = null;
     lastFaceZoomMoveKey = "";
-    clearThinkingCues();
-    thinkingTurnKey = "";
-    thinkingTurnStartedAt = 0;
   }
   const previousFen = currentGame?.fen;
   const previousDisplayedFen = currentGame ? displayedFenForGame(currentGame) : null;
@@ -1280,7 +1274,6 @@ function renderGame(game) {
   updateTurnRandomSoundButton(game, myTurn);
   updateTakebackControls(game, myTurn);
   updateTurnStatusButton(game, myTurn);
-  updateThinkingCue(game);
   document.querySelector("#resignButton").disabled = !myTurn;
   document.querySelector("#resignButton").title = myTurn ? "" : "Only the player whose turn it is can resign.";
   const addOpponentButton = document.querySelector("#addOpponentButton");
@@ -1692,47 +1685,6 @@ function updateTurnStatusButton(game, myTurn) {
   turnStatusButton.classList.toggle("is-your-turn", Boolean(visible && myTurn));
   turnStatusButton.classList.toggle("is-beg-now", Boolean(visible && shouldBegNow));
   turnStatusButton.textContent = shouldBegNow ? "BEG NOW" : myTurn ? "Your Turn" : opponentTurnLabel(game);
-}
-
-function updateThinkingCue(game) {
-  const turnKey = game?.status === "playing" ? `${game.id}:${game.moveCount || 0}:${game.turn}` : "";
-  if (!turnKey) {
-    clearThinkingCues();
-    thinkingTurnKey = "";
-    thinkingTurnStartedAt = 0;
-    return;
-  }
-  if (turnKey !== thinkingTurnKey) {
-    clearThinkingCues();
-    thinkingTurnKey = turnKey;
-    thinkingTurnStartedAt = Date.now();
-    return;
-  }
-  const elapsed = Date.now() - thinkingTurnStartedAt;
-  if (elapsed < THINKING_DELAY_MS) {
-    clearThinkingCues();
-    return;
-  }
-  showThinkingCueForColor(game.turn, elapsed);
-}
-
-function showThinkingCueForColor(color, elapsed) {
-  const card = document.querySelector(`.board-player-${boardPositionForColor(color)}`);
-  if (!card) return;
-  document.querySelectorAll(".thinking-cue").forEach((cue) => {
-    if (!card.contains(cue)) cue.remove();
-  });
-  let cue = card.querySelector(".thinking-cue");
-  if (!cue) {
-    cue = document.createElement("span");
-    cue.className = "thinking-cue";
-    card.append(cue);
-  }
-  cue.textContent = Math.floor(elapsed / 5000) % 2 === 0 ? "🧠 Thinking..." : "☕ Cooking...";
-}
-
-function clearThinkingCues() {
-  document.querySelectorAll(".thinking-cue").forEach((cue) => cue.remove());
 }
 
 function boardPositionForColor(color) {

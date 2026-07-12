@@ -3759,36 +3759,6 @@ body[data-board-theme="wood"] {
   font-weight: 800;
 }
 
-.thinking-cue {
-  position: absolute;
-  right: 9px;
-  bottom: 9px;
-  z-index: 4;
-  max-width: calc(100% - 18px);
-  padding: 5px 8px;
-  border: 1px solid rgba(242, 198, 109, 0.42);
-  border-radius: 999px;
-  color: var(--ink);
-  background: rgba(0, 0, 0, 0.72);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
-  font-size: 12px;
-  font-weight: 950;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  animation: thinkingPulse 900ms ease-in-out infinite alternate;
-}
-
-@keyframes thinkingPulse {
-  from {
-    transform: translateY(0) scale(1);
-  }
-  to {
-    transform: translateY(-2px) scale(1.035);
-  }
-}
-
 .team-video-grid .video-tile span {
   max-width: calc(100% - 20px);
   overflow: hidden;
