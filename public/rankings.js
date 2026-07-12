@@ -16,12 +16,27 @@ rankingsLogoutButton.addEventListener("click", () => {
 
 renderNavigation();
 loadRankings();
+prefetchDashboard();
 
 function renderNavigation() {
   const isLoggedIn = Boolean(localStorage.getItem("chessface:token"));
   rankingsProfileLink.classList.toggle("hidden", !isLoggedIn);
   rankingsLogoutButton.classList.toggle("hidden", !isLoggedIn);
   rankingsLoginLink.classList.toggle("hidden", isLoggedIn);
+}
+
+function prefetchDashboard() {
+  const assets = ["/", "/app.js?v=2026-07-12-rematch-popup-v1", "/styles.css?v=2026-07-12-rematch-popup-v1"];
+  const run = () => {
+    assets.forEach((href) => {
+      const link = document.createElement("link");
+      link.rel = "prefetch";
+      link.href = href;
+      document.head.append(link);
+    });
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 2500 });
+  else window.setTimeout(run, 1200);
 }
 
 async function loadRankings() {

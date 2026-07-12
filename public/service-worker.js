@@ -1,4 +1,4 @@
-const CACHE_NAME = "chessface-shell-v232";
+const CACHE_NAME = "chessface-shell-v234";
 const NETWORK_FIRST_PATHS = new Set([
   "/",
   "/index.html",

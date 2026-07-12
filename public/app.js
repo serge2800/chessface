@@ -100,6 +100,7 @@ const gameResultTitle = document.querySelector("#gameResultTitle");
 const gameResultScore = document.querySelector("#gameResultScore");
 const gameResultDetails = document.querySelector("#gameResultDetails");
 const gameResultRematchButton = document.querySelector("#gameResultRematchButton");
+const gameResultDashboardButton = document.querySelector("#gameResultDashboardButton");
 const gameResultContinueVideoButton = document.querySelector("#gameResultContinueVideoButton");
 const gameResultEndCallButton = document.querySelector("#gameResultEndCallButton");
 const gameResultAnalysisButton = document.querySelector("#gameResultAnalysisButton");
@@ -111,6 +112,11 @@ const facebookShareResultButton = document.querySelector("#facebookShareResultBu
 const whatsappShareResultButton = document.querySelector("#whatsappShareResultButton");
 const xShareResultButton = document.querySelector("#xShareResultButton");
 const copySocialResultButton = document.querySelector("#copySocialResultButton");
+const rematchRequestModal = document.querySelector("#rematchRequestModal");
+const rematchRequestTitle = document.querySelector("#rematchRequestTitle");
+const rematchRequestText = document.querySelector("#rematchRequestText");
+const acceptRematchButton = document.querySelector("#acceptRematchButton");
+const declineRematchButton = document.querySelector("#declineRematchButton");
 const accuracyAnalysisStatus = document.querySelector("#accuracyAnalysisStatus");
 const accuracyAnalysisPanel = document.querySelector("#accuracyAnalysisPanel");
 
@@ -143,7 +149,7 @@ const VIDEO_OUTPUT_WIDTH = 360;
 const VIDEO_OUTPUT_HEIGHT = 270;
 const VIDEO_FRAME_RATE = 20;
 const VIDEO_MAX_BITRATE = 650000;
-const APP_VERSION = "2026-07-11-donkey-fit-v231";
+const APP_VERSION = "2026-07-12-rematch-popup-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const VIDEO_CONSTRAINTS = {
   width: { ideal: VIDEO_OUTPUT_WIDTH, max: 480 },
@@ -161,6 +167,7 @@ let selectedTime = "5+0";
 let currentGame;
 let postGameVideoTimer;
 let postGameTimeControl = "5+0";
+let pendingRematchGameId = null;
 let liveEvalWorker = null;
 let liveEvalReadyPromise = null;
 let liveEvalCleanup = null;
@@ -181,6 +188,7 @@ const DONKEY_MOODS = [
 const DONKEY_VIDEO_FALLBACK_SRC = "/assets/eval/5.mov";
 const donkeyVideoPreloads = new Map();
 const donkeyVideoWatchdogs = new WeakMap();
+let matchmakingSlidesPreloaded = false;
 let selectedSquare;
 let pendingPremove = null;
 let playingPremove = false;
@@ -252,13 +260,6 @@ const matchmakingSlides = Array.from({ length: 30 }, (_, index) => ({
   image: `assets/matchmaking-${String(index + 1).padStart(2, "0")}.jpg`,
   caption: matchmakingCaptions[index % matchmakingCaptions.length]
 }));
-
-matchmakingSlides.forEach((slide) => {
-  const image = new Image();
-  image.src = slide.image;
-});
-
-scheduleDonkeyVideoWarmup();
 
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 
@@ -493,6 +494,7 @@ document.querySelector(".board-player-bottom").addEventListener("click", (event)
 });
 document.querySelector("#newGameButton").addEventListener("click", resetToLobby);
 gameResultRematchButton?.addEventListener("click", requestPostGameRematch);
+gameResultDashboardButton?.addEventListener("click", goToDashboardFromPostGame);
 gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTemporarily);
 gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
 gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
@@ -502,6 +504,8 @@ copySocialResultButton?.addEventListener("click", () => copyResultShareText({ so
 facebookShareResultButton?.addEventListener("click", () => openShareUrl("facebook"));
 whatsappShareResultButton?.addEventListener("click", () => openShareUrl("whatsapp"));
 xShareResultButton?.addEventListener("click", () => openShareUrl("x"));
+acceptRematchButton?.addEventListener("click", acceptIncomingRematch);
+declineRematchButton?.addEventListener("click", goToDashboardFromPostGame);
 micButton.addEventListener("click", toggleMic);
 opponentMuteButton.addEventListener("click", toggleOpponentAudio);
 cameraButton.addEventListener("click", toggleCamera);
@@ -750,6 +754,7 @@ function connectSocket() {
     challengeText.textContent = `${from.username} challenged you to ${timeControl}.`;
     challengeBox.classList.remove("hidden");
   });
+  socket.on("rematch:requested", showRematchRequest);
   socket.on("match:found", enterGame);
   socket.on("active-game:found", async (game) => {
     showNotice("Active game restored.");
@@ -785,6 +790,8 @@ function connectSocket() {
 async function enterGame(game) {
   clearPostGameVideoTimer();
   gameResultModal?.classList.add("hidden");
+  rematchRequestModal?.classList.add("hidden");
+  pendingRematchGameId = null;
   if (gameResultRematchButton) {
     gameResultRematchButton.disabled = false;
     gameResultRematchButton.textContent = "Rematch";
@@ -962,6 +969,7 @@ function leaveQueue() {
 
 function startMatchmakingRotation() {
   if (matchmakingTimer) return;
+  preloadMatchmakingSlides();
   applyMatchmakingSlide(matchmakingIndex);
   matchmakingTimer = setInterval(() => {
     matchmakingIndex = (matchmakingIndex + 1) % matchmakingSlides.length;
@@ -971,6 +979,15 @@ function startMatchmakingRotation() {
       matchmakingImage.classList.remove("is-switching");
     }, 120);
   }, 650);
+}
+
+function preloadMatchmakingSlides() {
+  if (matchmakingSlidesPreloaded) return;
+  matchmakingSlidesPreloaded = true;
+  matchmakingSlides.forEach((slide) => {
+    const image = new Image();
+    image.src = slide.image;
+  });
 }
 
 function stopMatchmakingRotation() {
@@ -1085,6 +1102,9 @@ function updateRematchButton(game) {
   const requested = Boolean(game.rematch?.requestedByViewer);
   gameResultRematchButton.disabled = requested;
   gameResultRematchButton.textContent = requested ? "Waiting..." : "Rematch";
+  if (game.rematch?.requestedByOpponent && !requested && rematchRequestModal?.classList.contains("hidden")) {
+    showRematchRequest({ gameId: game.id, from: game.rematch.requester });
+  }
 }
 
 function gameResultLine(game) {
@@ -1335,6 +1355,31 @@ function requestPostGameRematch() {
   socket?.emit("game:rematch", { gameId: currentGame.id });
   updateRematchButton({ ...currentGame, rematch: { ...currentGame.rematch, requestedByViewer: true } });
   showNotice("Rematch requested. Waiting for your opponent.");
+}
+
+function showRematchRequest({ gameId, from } = {}) {
+  if (!gameId || currentGame?.id !== gameId || currentGame?.status !== "finished") return;
+  pendingRematchGameId = gameId;
+  const name = from?.username || "Your opponent";
+  if (rematchRequestTitle) rematchRequestTitle.textContent = `${name} wants a rematch`;
+  if (rematchRequestText) rematchRequestText.textContent = "Accept to start a new game with the same player.";
+  rematchRequestModal?.classList.remove("hidden");
+}
+
+function acceptIncomingRematch() {
+  const gameId = pendingRematchGameId || currentGame?.id;
+  if (!gameId) return;
+  rematchRequestModal?.classList.add("hidden");
+  pendingRematchGameId = null;
+  clearPostGameVideoTimer();
+  socket?.emit("game:rematch", { gameId });
+  showNotice("Rematch accepted.");
+}
+
+function goToDashboardFromPostGame() {
+  pendingRematchGameId = null;
+  rematchRequestModal?.classList.add("hidden");
+  resetToLobby();
 }
 
 function continuePostGameVideoTemporarily() {
@@ -1908,9 +1953,9 @@ function scheduleDonkeyVideoWarmup() {
   ])];
   const run = () => warmDonkeyVideos(orderedSources);
   if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(run, { timeout: 2500 });
+    window.setTimeout(() => window.requestIdleCallback(run, { timeout: 5000 }), 2500);
   } else {
-    window.setTimeout(run, 1600);
+    window.setTimeout(run, 3500);
   }
 }
 
@@ -3638,6 +3683,8 @@ function resetToLobby() {
   currentGame = null;
   gameChat = [];
   gameResultModal?.classList.add("hidden");
+  rematchRequestModal?.classList.add("hidden");
+  pendingRematchGameId = null;
   renderGameChat();
   selectedSquare = null;
   gameLayout.classList.add("hidden");
@@ -3655,6 +3702,8 @@ function logout() {
   currentGame = null;
   gameChat = [];
   gameResultModal?.classList.add("hidden");
+  rematchRequestModal?.classList.add("hidden");
+  pendingRematchGameId = null;
   renderGameChat();
   appView.classList.add("hidden");
   authView.classList.remove("hidden");
@@ -4011,4 +4060,5 @@ syncSoundControls();
 loadSoundManifest();
 applySettings();
 boot();
+scheduleDonkeyVideoWarmup();
 setAuthMode(mode);

@@ -2805,7 +2805,7 @@ body[data-board-theme="wood"] {
 
 .game-result-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 24px;
 }
@@ -2941,6 +2941,54 @@ body[data-board-theme="wood"] {
   font-size: 13px;
   font-weight: 720;
   line-height: 1.12;
+}
+
+.rematch-request-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 8, 7, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+.rematch-request-card {
+  width: min(420px, calc(100vw - 36px));
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(242, 198, 109, 0.34);
+  border-radius: 8px;
+  background: rgba(14, 20, 21, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44);
+}
+
+.rematch-request-card h2,
+.rematch-request-card p {
+  margin: 0;
+}
+
+.rematch-request-card h2 {
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.05;
+}
+
+.rematch-request-card p:not(.eyebrow) {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.rematch-request-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rematch-request-actions button {
+  min-height: 44px;
 }
 
 .board-notice {

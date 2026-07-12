@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-11-donkey-fit-v231" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-rematch-popup-v1" />
   </head>
   <body>
     <main class="shell">
@@ -361,6 +361,7 @@
           <div class="game-result-actions">
             <button type="button" class="ghost" id="gameResultAnalysisButton">View Move Analysis</button>
             <button type="button" class="primary" id="gameResultRematchButton">Rematch</button>
+            <button type="button" class="ghost" id="gameResultDashboardButton">Go to Dashboard</button>
             <button type="button" class="ghost" id="gameResultShareButton">Share Result</button>
             <button type="button" class="danger hidden" id="gameResultEndCallButton">End game and call</button>
             <button type="button" class="ghost hidden" id="gameResultContinueVideoButton">Continue video for 2 minutes</button>
@@ -376,6 +377,18 @@
               <button type="button" id="xShareResultButton" aria-label="Share on X"><span class="share-icon x">X</span><span>X</span></button>
               <button type="button" id="copySocialResultButton" aria-label="Copy for Instagram"><span class="share-icon instagram">◎</span><span>Instagram</span></button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rematch-request-modal hidden" id="rematchRequestModal" aria-label="Rematch request" aria-modal="true" role="dialog">
+        <div class="rematch-request-card">
+          <p class="eyebrow">Rematch request</p>
+          <h2 id="rematchRequestTitle">Opponent wants a rematch</h2>
+          <p id="rematchRequestText">Accept to start a new game with the same player.</p>
+          <div class="rematch-request-actions">
+            <button type="button" class="primary" id="acceptRematchButton">Rematch</button>
+            <button type="button" class="ghost" id="declineRematchButton">Go to Dashboard</button>
           </div>
         </div>
       </section>
@@ -481,8 +494,8 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
-    <script src="stockfish-analysis-service.js?v=2026-07-11-donkey-fit-v231"></script>
+    <script src="stockfish-analysis-service.js?v=2026-07-12-rematch-popup-v1"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-11-donkey-fit-v231"></script>
+    <script src="app.js?v=2026-07-12-rematch-popup-v1"></script>
   </body>
 </html>

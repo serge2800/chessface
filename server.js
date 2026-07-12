@@ -793,11 +793,22 @@ function gamePayload(game, viewerId) {
 
 function rematchPayload(game, viewerId) {
   const requests = game.rematchRequests || new Set();
+  const requester = gamePlayers(game).find((player) => player.id !== viewerId && requests.has(player.id));
   return {
     requestedByViewer: requests.has(viewerId),
+    requestedByOpponent: Boolean(requester),
+    requester: requester ? { id: requester.id, username: requester.username } : null,
     requested: requests.size,
     needed: game.kind === "team" ? gamePlayers(game).length : 2
   };
+}
+
+function clearFinishedGameAssignment(socketId) {
+  const state = sockets.get(socketId);
+  if (!state?.gameId) return state;
+  const game = games.get(state.gameId);
+  if (game?.status === "finished") state.gameId = null;
+  return state;
 }
 
 function takebackPayload(game, viewerId) {
@@ -1052,7 +1063,7 @@ function leaveAllQueues(socketId) {
 
 function joinTeamQueue(socket, timeControl) {
   if (!TIME_CONTROLS[timeControl]) return socket.emit("error:message", "Unknown time control.");
-  const state = sockets.get(socket.id);
+  const state = clearFinishedGameAssignment(socket.id);
   if (state.gameId) return;
   leaveAllQueues(socket.id);
 
@@ -1645,7 +1656,7 @@ io.on("connection", (socket) => {
 
   socket.on("queue:join", (timeControl) => {
     if (!TIME_CONTROLS[timeControl]) return socket.emit("error:message", "Unknown time control.");
-    const state = sockets.get(socket.id);
+    const state = clearFinishedGameAssignment(socket.id);
     if (state.gameId) return;
     leaveAllQueues(socket.id);
 
@@ -1692,7 +1703,7 @@ io.on("connection", (socket) => {
 
   socket.on("openChallenge:join", ({ mode, timeControl, hostSocketId }) => {
     if (!TIME_CONTROLS[timeControl]) return socket.emit("error:message", "Unknown time control.");
-    const state = sockets.get(socket.id);
+    const state = clearFinishedGameAssignment(socket.id);
     if (!state || state.gameId) return;
     if (mode === "team") return joinTeamQueue(socket, timeControl);
 
@@ -1797,10 +1808,22 @@ io.on("connection", (socket) => {
     if (!gamePlayers(game).some((player) => player.id === socket.user.id)) return;
 
     game.rematchRequests ||= new Set();
+    const alreadyRequested = game.rematchRequests.has(socket.user.id);
     game.rematchRequests.add(socket.user.id);
     emitGame(game);
 
-    if (game.rematchRequests.size < 2) return;
+    if (game.rematchRequests.size < 2) {
+      if (alreadyRequested) return;
+      for (const player of gamePlayers(game)) {
+        if (player.id === socket.user.id || game.rematchRequests.has(player.id)) continue;
+        io.to(player.socketId).emit("rematch:requested", {
+          gameId: game.id,
+          from: { id: socket.user.id, username: socket.user.username },
+          timeControl: game.timeControl
+        });
+      }
+      return;
+    }
 
     const whiteSocket = socketForUser(game.white.id);
     const blackSocket = socketForUser(game.black.id);
