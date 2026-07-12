@@ -1,9 +1,11 @@
-const CACHE_NAME = "chessface-shell-v252";
+const CACHE_NAME = "chessface-shell-v253";
 const NETWORK_FIRST_PATHS = new Set([
   "/",
   "/index.html",
   "/analysis.html",
+  "/watch.html",
   "/app.js",
+  "/watch.js",
   "/profile.js",
   "/styles.css",
   "/config/sounds.js",
@@ -13,9 +15,11 @@ const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/rankings.html",
+  "/watch.html",
   "/styles.css",
   "/pieces.js",
   "/app.js",
+  "/watch.js",
   "/config/sounds.js",
   "/rankings.js",
   "/default-avatar.svg",

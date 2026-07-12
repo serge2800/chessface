@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-07-12-history-key-sounds-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-page-v1" />
   </head>
   <body>
     <main class="shell">
@@ -43,7 +43,7 @@
           </div>
           <div class="hero-stats" aria-label="Player rating">
             <span><strong>1000</strong> starting rating</span>
-            <a class="hero-link-button" href="/rankings.html">View player rankings</a>
+            <a class="hero-link-button" href="/watch.html">Watch live games</a>
           </div>
         </div>
 
@@ -133,7 +133,6 @@
       <section class="app-view hidden" id="appView">
         <header class="topbar">
           <div>
-            <p class="eyebrow">chessface.net</p>
             <h2 id="statusTitle">Choose a time control</h2>
           </div>
           <div class="topbar-actions">
@@ -144,6 +143,7 @@
                 <span id="myRating"></span>
               </div>
             </button>
+            <button type="button" class="ghost nav-action-button" onclick="location.href = '/watch.html'">Watch</button>
             <button type="button" class="ghost nav-action-button" id="rankingsButton" onclick="location.href = '/rankings.html'">Rankings</button>
             <button type="button" class="ghost nav-action-button" id="settingsButton" onclick="document.querySelector('#settingsModal')?.classList.remove('hidden')">Settings</button>
             <button type="button" class="ghost logout-button" id="logoutButton" onclick="localStorage.removeItem('chessface:token'); location.href = 'index.html'">Log out</button>
@@ -156,7 +156,6 @@
               <p class="eyebrow">Quick match</p>
               <h3>Pick your clock</h3>
             </div>
-            <span>Video-ready lobby</span>
           </div>
           <div class="time-controls">
             <button class="time-card active" data-time="3+0">
@@ -495,6 +494,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-07-12-history-key-sounds-v1"></script>
+    <script src="app.js?v=2026-07-12-watch-page-v1"></script>
   </body>
 </html>

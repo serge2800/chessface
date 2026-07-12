@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ChessFace Watch</title>
+    <meta name="theme-color" content="#0d1714" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ChessFace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/app-icon.svg" />
+    <link rel="stylesheet" href="styles.css?v=2026-07-12-watch-page-v1" />
+  </head>
+  <body class="watch-page">
+    <main class="watch-shell">
+      <header class="topbar rankings-nav">
+        <div>
+          <p class="eyebrow">chessface.net</p>
+          <h2>Watch</h2>
+        </div>
+        <nav class="topbar-actions" aria-label="Main navigation">
+          <a class="ghost nav-action-button" href="/">Dashboard</a>
+          <a class="ghost nav-action-button active" href="/watch.html" aria-current="page">Watch</a>
+          <a class="ghost nav-action-button" href="/rankings.html">Rankings</a>
+          <a class="ghost nav-action-button hidden" href="/profile.html" id="watchProfileLink">Profile</a>
+          <button type="button" class="ghost logout-button hidden" id="watchLogoutButton">Log out</button>
+          <a class="hero-link-button" href="/" id="watchLoginLink">Log in</a>
+        </nav>
+      </header>
+
+      <section class="watch-grid">
+        <aside class="watch-games-panel" aria-label="Live games">
+          <div class="watch-panel-head">
+            <div>
+              <p class="eyebrow">Live now</p>
+              <h1>Games to watch</h1>
+            </div>
+            <button type="button" class="ghost logout-button" id="refreshWatchButton">Refresh</button>
+          </div>
+          <div class="watch-games-list" id="watchGamesList">
+            <div class="watch-empty">Loading live games...</div>
+          </div>
+        </aside>
+
+        <section class="watch-board-panel" aria-label="Selected game">
+          <div class="watch-matchup" id="watchMatchup">
+            <p class="eyebrow">Spectator board</p>
+            <h2>Select a live game</h2>
+            <span>Games are sorted by combined player rating.</span>
+          </div>
+          <div class="watch-board-wrap">
+            <div class="watch-player watch-player-top" id="watchBlackPlayer"></div>
+            <div class="board watch-board" id="watchBoard" aria-label="Watched chess board"></div>
+            <div class="watch-player watch-player-bottom" id="watchWhitePlayer"></div>
+          </div>
+          <div class="watch-status-row">
+            <span id="watchMoveStatus">No game selected</span>
+            <span id="watchSpectatorCount">0 watching</span>
+          </div>
+        </section>
+
+        <aside class="game-chat watch-chat-panel" aria-label="Spectator chat">
+          <div class="game-chat-head">
+            <div>
+              <p class="eyebrow">Spectator chat</p>
+              <h3>Watch room</h3>
+            </div>
+            <span id="watchChatStatus">Closed</span>
+          </div>
+          <div class="game-chat-messages" id="watchChatMessages" aria-live="polite">
+            <p class="chat-empty">Select a live game to chat with other spectators.</p>
+          </div>
+          <form class="game-chat-form" id="watchChatForm">
+            <input id="watchChatInput" name="message" maxlength="240" autocomplete="off" placeholder="Type a message..." disabled />
+            <button type="submit" id="watchChatSubmit" disabled>Send</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="pieces.js"></script>
+    <script src="watch.js?v=2026-07-12-watch-page-v1"></script>
+  </body>
+</html>

@@ -89,6 +89,10 @@ const games = new Map();
 const challenges = new Map();
 const soundUnlockTimers = new Map();
 
+function watchRoom(gameId) {
+  return `watch:${gameId}`;
+}
+
 function liveQueuedSockets(queue, socketId) {
   return [...queue].filter((id) => {
     if (id === socketId) return false;
@@ -968,10 +972,96 @@ function emitGame(game) {
     const liveSocket = socketForGamePlayer(game, player);
     io.to(liveSocket?.id || player.socketId).compress(false).emit("game:update", gamePayload(game, player.id));
   }
+  emitWatchGame(game);
+  broadcastWatchList();
 }
 
 function gamePlayers(game) {
   return game.kind === "team" ? [...game.whiteTeam, ...game.blackTeam] : [game.white, game.black];
+}
+
+function watchPlayerPayload(player) {
+  return {
+    id: player.id,
+    username: player.username,
+    fullName: player.fullName,
+    avatarUrl: player.avatarUrl,
+    countryCode: player.countryCode || "OTHER",
+    rating: player.rating || START_RATING
+  };
+}
+
+function watchGamePlayers(game) {
+  if (game.kind === "team") {
+    return {
+      white: game.whiteTeam.map(watchPlayerPayload),
+      black: game.blackTeam.map(watchPlayerPayload)
+    };
+  }
+  return {
+    white: [watchPlayerPayload(game.white)],
+    black: [watchPlayerPayload(game.black)]
+  };
+}
+
+function watchRatingTotal(game) {
+  return gamePlayers(game).reduce((sum, player) => sum + (player.rating || START_RATING), 0);
+}
+
+function watchSpectatorCount(game) {
+  const room = io.sockets.adapter.rooms.get(watchRoom(game.id));
+  if (!room) return 0;
+  const playerSocketIds = new Set(gamePlayers(game).map((player) => player.socketId));
+  return [...room].filter((socketId) => !playerSocketIds.has(socketId)).length;
+}
+
+function watchGameSummary(game) {
+  const moveCount = game.chess.history().length;
+  return {
+    id: game.id,
+    kind: game.kind || "normal",
+    status: game.status,
+    timeControl: game.timeControl,
+    moveCount,
+    turn: game.chess.turn() === "w" ? "white" : "black",
+    ratingTotal: watchRatingTotal(game),
+    spectatorCount: watchSpectatorCount(game),
+    players: watchGamePlayers(game),
+    clocks: game.clocks,
+    startedAt: game.startedAt || null
+  };
+}
+
+function watchGamePayload(game) {
+  const lastMove = game.chess.history({ verbose: true }).at(-1);
+  return {
+    ...watchGameSummary(game),
+    fen: game.chess.fen(),
+    lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
+    result: game.result,
+    reason: game.reason
+  };
+}
+
+function watchListPayload() {
+  return [...games.values()]
+    .filter((game) => game.status === "playing")
+    .map(watchGameSummary)
+    .sort((a, b) => {
+      const ratingDiff = b.ratingTotal - a.ratingTotal;
+      if (ratingDiff) return ratingDiff;
+      const spectatorDiff = b.spectatorCount - a.spectatorCount;
+      if (spectatorDiff) return spectatorDiff;
+      return b.moveCount - a.moveCount;
+    });
+}
+
+function broadcastWatchList() {
+  io.emit("watch:list", { games: watchListPayload() });
+}
+
+function emitWatchGame(game) {
+  io.to(watchRoom(game.id)).compress(false).emit("watch:game", watchGamePayload(game));
 }
 
 function resetVideoHandshake(game) {
@@ -1208,6 +1298,8 @@ function createGame(a, b, timeKey) {
     videoStartedPairs: new Set(),
     randomSoundPushes: new Set(),
     rematchRequests: new Set(),
+    spectatorChat: [],
+    startedAt: new Date().toISOString(),
     lastTickAt: Date.now(),
     timer: null
   };
@@ -1217,6 +1309,7 @@ function createGame(a, b, timeKey) {
   sockets.get(black.socketId).gameId = game.id;
   io.to(white.socketId).emit("match:found", gamePayload(game, white.id));
   io.to(black.socketId).emit("match:found", gamePayload(game, black.id));
+  broadcastWatchList();
 }
 
 function createTeamGame(players, timeKey) {
@@ -1243,6 +1336,8 @@ function createTeamGame(players, timeKey) {
     videoStartedPairs: new Set(),
     randomSoundPushes: new Set(),
     rematchRequests: new Set(),
+    spectatorChat: [],
+    startedAt: new Date().toISOString(),
     lastTickAt: Date.now(),
     timer: null
   };
@@ -1256,6 +1351,7 @@ function createTeamGame(players, timeKey) {
     }
     io.to(player.socketId).emit("match:found", gamePayload(game, player.id));
   }
+  broadcastWatchList();
 }
 
 function socketForUser(userId) {
@@ -1684,6 +1780,7 @@ io.on("connection", (socket) => {
   sockets.set(socket.id, {
     userId: socket.user.id,
     gameId: null,
+    watchingGameId: null,
     queuedFor: null,
     soundSettings: normalizeSoundSettings()
   });
@@ -1832,6 +1929,60 @@ io.on("connection", (socket) => {
         settings: state.soundSettings
       });
     }
+  });
+
+  socket.on("watch:list", () => {
+    socket.emit("watch:list", { games: watchListPayload() });
+  });
+
+  socket.on("watch:join", ({ gameId } = {}) => {
+    const state = sockets.get(socket.id);
+    const game = games.get(gameId);
+    if (!state || !game || game.status !== "playing") {
+      socket.emit("error:message", "That game is no longer available to watch.");
+      socket.emit("watch:list", { games: watchListPayload() });
+      return;
+    }
+    if (state.watchingGameId && state.watchingGameId !== game.id) {
+      socket.leave(watchRoom(state.watchingGameId));
+    }
+    state.watchingGameId = game.id;
+    socket.join(watchRoom(game.id));
+    socket.emit("watch:game", watchGamePayload(game));
+    socket.emit("watch:chat:history", {
+      gameId: game.id,
+      messages: Array.isArray(game.spectatorChat) ? game.spectatorChat.slice(-80) : []
+    });
+    broadcastWatchList();
+  });
+
+  socket.on("watch:leave", () => {
+    const state = sockets.get(socket.id);
+    if (!state?.watchingGameId) return;
+    const previousGameId = state.watchingGameId;
+    socket.leave(watchRoom(previousGameId));
+    state.watchingGameId = null;
+    broadcastWatchList();
+  });
+
+  socket.on("watch:chat", ({ gameId, text: rawText } = {}) => {
+    const state = sockets.get(socket.id);
+    const game = games.get(gameId || state?.watchingGameId);
+    if (!state || !game || game.status !== "playing" || state.watchingGameId !== game.id) return;
+    const text = String(rawText || "").trim().slice(0, 240);
+    if (!text) return;
+    const message = {
+      id: uuid(),
+      gameId: game.id,
+      from: socket.user.id,
+      username: socket.user.username,
+      text,
+      sentAt: new Date().toISOString()
+    };
+    game.spectatorChat ||= [];
+    game.spectatorChat.push(message);
+    game.spectatorChat = game.spectatorChat.slice(-120);
+    io.to(watchRoom(game.id)).emit("watch:chat", message);
   });
 
   socket.on("game:accuracy:save", ({ gameId, analysis }) => {
@@ -2175,12 +2326,14 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     const state = sockets.get(socket.id);
+    const watchedGameId = state?.watchingGameId;
     leaveAllQueues(socket.id);
     for (const [id, challenge] of challenges.entries()) {
       if (challenge.fromSocketId === socket.id || challenge.toSocketId === socket.id) challenges.delete(id);
     }
     sockets.delete(socket.id);
     broadcastOpenChallenges();
+    if (watchedGameId) broadcastWatchList();
   });
 });
 
