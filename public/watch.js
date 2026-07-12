@@ -31,6 +31,7 @@ let watchNotice = "";
 let watchChat = [];
 let liveKitModulePromise = null;
 let watchLiveKitRoom = null;
+let watchLiveKitGameId = "";
 let watchLiveKitTracks = new Map();
 let watchCameraStatusTimer = null;
 
@@ -193,6 +194,7 @@ function joinGame(gameId) {
     watchChat = [];
     renderSelectedGame();
     renderGameTable();
+    startWatchLiveKit(response.game);
   });
 }
 
@@ -332,7 +334,13 @@ function loadLiveKitClient() {
 
 async function startWatchLiveKit(game) {
   if (!game?.id || game.status !== "playing" || !token) return;
+  if (watchLiveKitRoom && watchLiveKitGameId === game.id) {
+    syncWatchLiveKitParticipants(watchLiveKitRoom);
+    scheduleWatchCameraStatusCheck();
+    return;
+  }
   closeWatchLiveKit();
+  watchLiveKitGameId = game.id;
   renderWatchVideoPlaceholders();
   renderWatchVideoStatus("Connecting cameras...");
   try {
@@ -360,9 +368,11 @@ async function startWatchLiveKit(game) {
     watchLiveKitRoom = room;
     await room.connect(session.url, session.token, { autoSubscribe: true });
     syncWatchLiveKitParticipants(room);
+    scheduleWatchLiveKitSync(room);
     scheduleWatchCameraStatusCheck();
   } catch (error) {
     console.warn("[ChessFace] Watch cameras unavailable:", error);
+    closeWatchLiveKit();
     renderWatchVideoStatus("Cameras unavailable");
   }
 }
@@ -374,6 +384,18 @@ function wireWatchLiveKitRoom(room, LiveKit) {
   });
   room.on(RoomEvent.TrackPublished || "trackPublished", (publication, participant) => {
     subscribeWatchPublication(publication, participant);
+    syncWatchParticipant(participant);
+  });
+  room.on(RoomEvent.TrackUnmuted || "trackUnmuted", (publication, participant) => {
+    subscribeWatchPublication(publication, participant);
+    syncWatchParticipant(participant);
+  });
+  room.on(RoomEvent.TrackSubscriptionStatusChanged || "trackSubscriptionStatusChanged", (publication, _status, participant) => {
+    subscribeWatchPublication(publication, participant);
+    syncWatchParticipant(participant);
+  });
+  room.on(RoomEvent.ParticipantMetadataChanged || "participantMetadataChanged", (_metadata, participant) => {
+    syncWatchParticipant(participant);
   });
   room.on(RoomEvent.ParticipantConnected || "participantConnected", (participant) => {
     syncWatchParticipant(participant);
@@ -383,6 +405,10 @@ function wireWatchLiveKitRoom(room, LiveKit) {
   });
   room.on(RoomEvent.ParticipantDisconnected || "participantDisconnected", (participant) => {
     clearWatchParticipant(participant);
+  });
+  room.on(RoomEvent.ConnectionStateChanged || "connectionStateChanged", () => {
+    syncWatchLiveKitParticipants(room);
+    scheduleWatchCameraStatusCheck();
   });
   room.on(RoomEvent.Disconnected || "disconnected", () => {
     watchLiveKitTracks.clear();
@@ -394,6 +420,14 @@ function wireWatchLiveKitRoom(room, LiveKit) {
 
 function syncWatchLiveKitParticipants(room) {
   liveKitRemoteParticipants(room).forEach(syncWatchParticipant);
+}
+
+function scheduleWatchLiveKitSync(room) {
+  [250, 750, 1500, 3000, 6000, 10000, 16000].forEach((delay) => {
+    window.setTimeout(() => {
+      if (watchLiveKitRoom === room) syncWatchLiveKitParticipants(room);
+    }, delay);
+  });
 }
 
 function syncWatchParticipant(participant) {
@@ -517,6 +551,7 @@ function liveKitTrackKind(track) {
 function closeWatchLiveKit() {
   clearTimeout(watchCameraStatusTimer);
   watchCameraStatusTimer = null;
+  watchLiveKitGameId = "";
   if (!watchLiveKitRoom) return;
   try {
     watchLiveKitRoom.disconnect(false);
