@@ -84,6 +84,7 @@ const legalMovesSetting = document.querySelector("#legalMovesSetting");
 const premovesSetting = document.querySelector("#premovesSetting");
 const coordinatesSetting = document.querySelector("#coordinatesSetting");
 const moveSoundSetting = document.querySelector("#moveSoundSetting");
+const faceMeshAlwaysOnSetting = document.querySelector("#faceMeshAlwaysOnSetting");
 const capturedPiecesSetting = document.querySelector("#capturedPiecesSetting");
 const confirmActionsSetting = document.querySelector("#confirmActionsSetting");
 const allowChallengesSetting = document.querySelector("#allowChallengesSetting");
@@ -140,6 +141,7 @@ const defaultSettings = {
   premoves: false,
   coordinates: true,
   moveSound: true,
+  faceMeshAlwaysOn: false,
   capturedPieces: true,
   confirmActions: true,
   allowChallenges: true,
@@ -150,7 +152,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-12-face-mesh-v1";
+const APP_VERSION = "2026-07-12-face-mesh-setting-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -657,6 +659,7 @@ if (settingsModal) {
   premovesSetting,
   coordinatesSetting,
   moveSoundSetting,
+  faceMeshAlwaysOnSetting,
   capturedPiecesSetting,
   confirmActionsSetting,
   allowChallengesSetting,
@@ -2898,6 +2901,7 @@ async function startMediaAndPeer() {
     rawLocalStream.getVideoTracks().forEach((track) => {
       track.contentHint = "motion";
     });
+    faceMeshEnabled = Boolean(settings.faceMeshAlwaysOn);
     localStream = await buildOutgoingMediaStream(rawLocalStream);
     prepareVideoElement(localVideo, { muted: true });
     localVideo.srcObject = localStream;
@@ -4374,6 +4378,7 @@ function syncSettingsControls() {
   premovesSetting.checked = settings.premoves;
   coordinatesSetting.checked = settings.coordinates;
   moveSoundSetting.checked = settings.moveSound;
+  faceMeshAlwaysOnSetting.checked = settings.faceMeshAlwaysOn;
   capturedPiecesSetting.checked = settings.capturedPieces;
   confirmActionsSetting.checked = settings.confirmActions;
   allowChallengesSetting.checked = settings.allowChallenges;
@@ -4381,6 +4386,7 @@ function syncSettingsControls() {
 }
 
 function updateSettingsFromControls() {
+  const previousFaceMeshAlwaysOn = Boolean(settings.faceMeshAlwaysOn);
   settings = {
     ...settings,
     highlightMoves: highlightMovesSetting.checked,
@@ -4388,6 +4394,7 @@ function updateSettingsFromControls() {
     premoves: premovesSetting.checked,
     coordinates: coordinatesSetting.checked,
     moveSound: moveSoundSetting.checked,
+    faceMeshAlwaysOn: faceMeshAlwaysOnSetting.checked,
     capturedPieces: capturedPiecesSetting.checked,
     confirmActions: confirmActionsSetting.checked,
     allowChallenges: allowChallengesSetting.checked,
@@ -4396,12 +4403,31 @@ function updateSettingsFromControls() {
   if (!settings.premoves) clearPendingPremove();
   saveSettings();
   applySettings();
+  if (previousFaceMeshAlwaysOn !== Boolean(settings.faceMeshAlwaysOn)) applyFaceMeshDefaultDuringGame();
 }
 
 function applySettings() {
   document.body.dataset.boardTheme = settings.boardTheme;
   document.body.classList.toggle("hide-captured", !settings.capturedPieces);
   renderCurrentBoard();
+}
+
+function applyFaceMeshDefaultDuringGame() {
+  if (!currentGame || currentGame.videoOff || currentGame.status !== "playing" || !rawLocalStream?.getVideoTracks().length) {
+    faceMeshEnabled = Boolean(settings.faceMeshAlwaysOn);
+    updateFaceMeshButton();
+    return;
+  }
+  faceMeshEnabled = Boolean(settings.faceMeshAlwaysOn);
+  updateFaceMeshButton(true);
+  restartMediaPipeline()
+    .catch((error) => {
+      console.warn("[ChessFace] Could not apply Face mesh setting:", error);
+      faceMeshEnabled = false;
+      updateFaceMeshButton();
+      showNotice("Face mesh setting could not be applied.");
+    })
+    .finally(() => updateFaceMeshButton());
 }
 
 function renderCapturedPieces(pieceAt) {
