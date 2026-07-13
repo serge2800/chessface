@@ -4400,10 +4400,10 @@ body[data-board-theme="wood"] {
     --play-surface-size: min(calc(100vh - 176px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 56px), 760px);
     --play-surface-size: min(calc(100dvh - 176px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 56px), 760px);
     --board-column-size: calc(var(--side-controls-size) + var(--play-surface-size) + 18px);
-    width: 100%;
+    width: max-content;
     max-width: 100%;
     grid-template-columns: var(--board-column-size) var(--video-column-size) !important;
-    justify-content: center !important;
+    justify-content: start !important;
     gap: 8px !important;
   }
 
