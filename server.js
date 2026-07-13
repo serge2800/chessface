@@ -974,7 +974,7 @@ function videoPeerPayload(game, viewerId, player) {
     teamColor: peerColor,
     teamName: peerColor === "white" ? "white team" : "black team",
     isTeammate: sameTeam(game, viewerId, player.id),
-    initiator: String(viewerId) < String(player.id)
+    initiator: game.kind === "team" ? String(viewerId) < String(player.id) : colorForUser(game, viewerId) === "white"
   };
 }
 

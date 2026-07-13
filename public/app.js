@@ -166,7 +166,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-mobile-remote-sound-v2";
+const APP_VERSION = "2026-07-13-ipad-webrtc-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -3514,6 +3514,35 @@ function ensureTrackInMediaElement(element, track, kind = track?.kind) {
   element.srcObject = stream;
 }
 
+function playMediaElement(element) {
+  if (!element?.play) return;
+  const tryPlay = () => element.play().catch(() => {});
+  tryPlay();
+  element.addEventListener("loadedmetadata", tryPlay, { once: true });
+  element.addEventListener("canplay", tryPlay, { once: true });
+}
+
+function attachRemotePeerTrack(peerId, event) {
+  const track = event.track;
+  if (!track) return;
+  if (track.kind === "audio") {
+    const tile = peerVideoTiles.get(String(peerId)) || peerVideoElements.get(String(peerId))?.closest(".video-tile");
+    const audio = ensurePeerAudioElement(peerId, tile);
+    ensureTrackInMediaElement(audio, track, "audio");
+    applyOpponentAudioState();
+    playMediaElement(audio);
+    return;
+  }
+
+  if (track.kind !== "video") return;
+  const video = peerVideoElements.get(String(peerId));
+  if (!video) return;
+  prepareVideoElement(video, { muted: true });
+  ensureTrackInMediaElement(video, track, "video");
+  applyOpponentAudioState();
+  playMediaElement(video);
+}
+
 function detachLiveKitTrack(track, participant) {
   const peerId = String(participant?.identity || "");
   const video = peerVideoElements.get(peerId);
@@ -3646,18 +3675,9 @@ async function ensurePeerConnection(peerId) {
     const sender = peerConnection.addTrack(track, localStream);
     if (track.kind === "video") limitVideoSender(sender);
   });
+  preferSafariFriendlyVideoCodecs(peerConnection);
   peerConnection.ontrack = (event) => {
-    const video = peerVideoElements.get(peerId);
-    if (!video) return;
-    if (event.streams?.[0]) {
-      video.srcObject = event.streams[0];
-    } else {
-      const stream = video.srcObject instanceof MediaStream ? video.srcObject : new MediaStream();
-      stream.addTrack(event.track);
-      video.srcObject = stream;
-    }
-    applyOpponentAudioState();
-    video.play().catch(() => {});
+    attachRemotePeerTrack(peerId, event);
   };
   peerConnection.onconnectionstatechange = () => {
     const state = peerConnection.connectionState;
@@ -3676,10 +3696,32 @@ async function ensurePeerConnection(peerId) {
   return peerConnection;
 }
 
+function preferSafariFriendlyVideoCodecs(peerConnection) {
+  const capabilities = window.RTCRtpSender?.getCapabilities?.("video");
+  const codecs = capabilities?.codecs;
+  if (!codecs?.length) return;
+  const h264 = codecs.filter((codec) => codec.mimeType?.toLowerCase() === "video/h264");
+  if (!h264.length) return;
+  const preferred = [
+    ...h264,
+    ...codecs.filter((codec) => codec.mimeType?.toLowerCase() !== "video/h264")
+  ];
+  peerConnection.getTransceivers?.()
+    .filter((transceiver) => transceiver.receiver?.track?.kind === "video" || transceiver.sender?.track?.kind === "video")
+    .forEach((transceiver) => {
+      try {
+        transceiver.setCodecPreferences(preferred);
+      } catch {
+        // Older Safari builds either lack this API or reject unsupported preference lists.
+      }
+    });
+}
+
 async function createAndSendOffer(peerId, options = {}) {
   const peerConnection = peerConnections.get(peerId);
   if (!peerConnection || currentGame?.videoOff || peerConnection.signalingState !== "stable") return;
   try {
+    preferSafariFriendlyVideoCodecs(peerConnection);
     const offer = await peerConnection.createOffer({ iceRestart: Boolean(options.iceRestart) });
     await peerConnection.setLocalDescription(offer);
     sendSignal(peerId, { description: peerConnection.localDescription });
@@ -3740,6 +3782,7 @@ async function applySignal(peerId, signal) {
     await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.description));
     await flushPendingIceCandidates(peerId);
     if (signal.description.type === "offer") {
+      preferSafariFriendlyVideoCodecs(peerConnection);
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
       sendSignal(peerId, { description: peerConnection.localDescription });

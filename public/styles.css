@@ -796,10 +796,10 @@ input[type="file"] {
 .topbar {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 12px;
+  margin-bottom: 12px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: rgba(4, 8, 9, 0.42);
@@ -813,7 +813,7 @@ input[type="file"] {
 
 .topbar-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   flex: 0 0 auto;
 }
@@ -834,8 +834,8 @@ input[type="file"] {
 
 .nav-action-button,
 .logout-button {
-  min-height: 50px;
-  padding: 0 16px;
+  min-height: 44px;
+  padding: 0 13px;
   font-weight: 900;
 }
 
@@ -863,7 +863,7 @@ input[type="file"] {
 
 .topbar h2 {
   margin: 0;
-  font-size: clamp(28px, 4vw, 46px);
+  font-size: clamp(25px, 3vw, 38px);
   line-height: 1;
 }
 
@@ -874,10 +874,10 @@ input[type="file"] {
 }
 
 .profile {
-  min-height: 64px;
-  min-width: 220px;
-  max-width: 300px;
-  padding: 8px 12px 8px 8px;
+  min-height: 54px;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 6px 10px 6px 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background:
@@ -897,8 +897,8 @@ input[type="file"] {
 }
 
 .profile img {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(242, 198, 109, 0.52);
@@ -1498,17 +1498,25 @@ input[type="file"] {
 }
 
 .game-layout {
-  --play-surface-size: min(82vh, calc(100vw - 450px), 960px);
-  --camera-stack-extra: 76px;
-  --board-top-lift: 96px;
+  --layout-pad: 16px;
+  --video-column-size: clamp(320px, 28vw, 480px);
+  --side-controls-size: clamp(104px, 9vw, 150px);
+  --play-surface-size: min(calc(100vh - 180px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 72px), 760px);
+  --play-surface-size: min(calc(100dvh - 180px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 72px), 760px);
+  --camera-stack-extra: 0px;
+  --board-top-lift: 0px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(390px, 480px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, var(--video-column-size));
   gap: 0;
   align-items: start;
 }
 
 .game-layout.team-game-layout {
-  grid-template-columns: minmax(780px, 1fr) minmax(480px, 620px);
+  --video-column-size: clamp(360px, 28vw, 540px);
+  --side-controls-size: clamp(118px, 8vw, 160px);
+  --play-surface-size: min(calc(100vh - 170px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 84px), 820px);
+  --play-surface-size: min(calc(100dvh - 170px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 84px), 820px);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, var(--video-column-size));
   gap: 0;
   align-items: start;
 }
@@ -1521,17 +1529,21 @@ input[type="file"] {
 
 .team-game-layout .video-panel {
   position: sticky;
-  top: 14px;
+  top: 10px;
+  padding: 10px;
   padding-left: 0;
 }
 
 .game-layout:not(.team-game-layout) .board-wrap {
+  padding: 10px;
   padding-right: 0;
+  overflow: hidden;
 }
 
 .game-layout:not(.team-game-layout) .video-panel {
+  padding: 10px;
   padding-left: 0;
-  transform: translateY(-3px);
+  transform: none;
 }
 
 .board-wrap {
@@ -1558,39 +1570,61 @@ input[type="file"] {
 }
 
 .board-wrap.team-game {
-  grid-template-columns: minmax(142px, 176px) minmax(0, 1fr);
-  grid-template-rows: auto auto auto 1fr auto auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto auto auto;
   grid-template-areas:
-    "top top"
-    "status board"
-    "roster board"
-    ". board"
-    "bottom bottom"
-    "actions actions"
-    "draw draw";
-  column-gap: 10px;
-  row-gap: 10px;
+    "top"
+    "board"
+    "bottom"
+    "status"
+    "roster"
+    "actions"
+    "draw";
+  gap: 8px;
   align-items: start;
-  padding-left: 10px;
-  padding-right: 0;
+  justify-content: center;
+  padding: 10px 0 10px 10px;
+  overflow: hidden;
 }
 
 .team-game .board-player-top {
   grid-area: top;
 }
 
+.team-game > .board-player-top,
+.team-game > .board-player-bottom {
+  width: min(100%, calc(var(--side-controls-size) + var(--play-surface-size) + 8px));
+  max-width: min(100%, calc(var(--side-controls-size) + var(--play-surface-size) + 8px));
+  min-height: 58px;
+  justify-self: center;
+}
+
 .team-game .board-stage {
-  grid-column: 1 / -1;
-  grid-row: 2 / 5;
-  grid-template-columns: minmax(142px, 176px) minmax(0, auto);
-  justify-content: space-between;
-  justify-self: stretch;
-  width: calc(100% + 30px);
-  max-width: none;
+  grid-area: board;
+  grid-column: auto;
+  grid-row: auto;
+  grid-template-columns: minmax(104px, var(--side-controls-size)) minmax(0, auto);
+  justify-content: center;
+  justify-self: center;
+  width: min(100%, calc(var(--side-controls-size) + var(--play-surface-size) + 8px));
+  max-width: 100%;
 }
 
 .team-game .board-player-bottom {
   grid-area: bottom;
+}
+
+.team-game .board-stage > .board {
+  width: var(--play-surface-size);
+  max-width: 100%;
+  margin-top: 0;
+  justify-self: center;
+  transform: none !important;
+}
+
+.team-game .eval-bar,
+.team-game .board-animation-slots {
+  display: none;
 }
 
 .team-game .actions {
@@ -2323,8 +2357,8 @@ input[type="file"] {
 .board-stage {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(112px, 150px) minmax(0, auto);
-  gap: 10px;
+  grid-template-columns: minmax(92px, var(--side-controls-size)) minmax(0, auto);
+  gap: 8px;
   align-items: start;
   justify-content: center;
   justify-self: center;
@@ -2335,15 +2369,15 @@ input[type="file"] {
 .board-side-controls {
   grid-column: 1;
   grid-row: 1;
-  min-height: calc(var(--play-surface-size) + var(--board-top-lift));
+  min-height: var(--play-surface-size);
   display: grid;
   gap: 4px;
   align-content: start;
-  margin-top: calc(-1 * var(--board-top-lift));
-  padding-top: 82px;
+  margin-top: 0;
+  padding-top: 0;
   min-width: 0;
   position: relative;
-  transform: translate(-48px, -6px);
+  transform: none;
 }
 
 .board-side-controls .media-actions,
@@ -2364,7 +2398,7 @@ input[type="file"] {
 .board-side-controls .takeback-request-button,
 .board-side-controls .turn-status-button,
 .board-side-controls .accept-beg-takeback-button {
-  transform: translateX(-15px);
+  transform: none;
 }
 
 
@@ -2424,14 +2458,11 @@ input[type="file"] {
 .board-stage > .board {
   grid-column: 2;
   grid-row: 1;
-}
-
-.board-stage > .board {
-  transform: translate(62px, 5px) !important;
+  transform: none !important;
 }
 
 .eval-bar {
-  transform: translate(12px, 3px) !important;
+  transform: none !important;
 }
 
 .eval-bar {
@@ -2473,10 +2504,10 @@ input[type="file"] {
 }
 
 .board-wrap:not(.team-game) .board {
-  width: calc(var(--play-surface-size) + var(--board-top-lift));
-  max-width: calc(100% + var(--board-top-lift));
-  margin-top: calc(-1 * var(--board-top-lift));
-  justify-self: end;
+  width: var(--play-surface-size);
+  max-width: 100%;
+  margin-top: 0;
+  justify-self: center;
 }
 
 .board-wrap:not(.team-game) > .board-player-top,
@@ -2525,12 +2556,12 @@ input[type="file"] {
 
 .board-wrap:not(.team-game) > .board-player-top {
   position: relative;
-  top: -16px;
+  top: 0;
 }
 
 .board-wrap:not(.team-game) > .board-player-bottom {
   position: relative;
-  top: -71px;
+  top: 0;
   z-index: 3;
 }
 
@@ -3981,13 +4012,145 @@ body[data-board-theme="wood"] {
   line-height: 1;
 }
 
+@media (min-width: 961px) and (max-width: 1366px) {
+  .shell {
+    width: calc(100vw - 16px);
+    padding: 8px 0;
+  }
+
+  .game-layout:not(.team-game-layout) {
+    --play-surface-size: min(calc(100vh - 164px), calc(100vw - 572px), 760px);
+    --play-surface-size: min(calc(100dvh - 164px), calc(100vw - 572px), 760px);
+    --camera-stack-extra: 0px;
+    --board-top-lift: 0px;
+    grid-template-columns: minmax(0, 1fr) minmax(326px, 360px);
+  }
+
+  .game-layout:not(.team-game-layout) .board-wrap {
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  .game-layout:not(.team-game-layout) .video-panel {
+    padding: 10px;
+    padding-left: 0;
+    transform: none;
+  }
+
+  .game-layout:not(.team-game-layout) .board-stage {
+    grid-template-columns: minmax(96px, 118px) minmax(0, auto);
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .game-layout:not(.team-game-layout) .board-stage > .board {
+    width: var(--play-surface-size);
+    max-width: 100%;
+    margin-top: 0;
+    transform: none !important;
+  }
+
+  .game-layout:not(.team-game-layout) .board-side-controls {
+    min-height: var(--play-surface-size);
+    margin-top: 0;
+    padding-top: 0;
+    transform: none;
+  }
+
+  .game-layout:not(.team-game-layout) .board-side-controls .board-side-actions,
+  .game-layout:not(.team-game-layout) .board-side-controls .turn-random-sound,
+  .game-layout:not(.team-game-layout) .board-side-controls .turn-custom-sound,
+  .game-layout:not(.team-game-layout) .board-side-controls .face-mesh-button,
+  .game-layout:not(.team-game-layout) .board-side-controls .takeback-request-button,
+  .game-layout:not(.team-game-layout) .board-side-controls .turn-status-button,
+  .game-layout:not(.team-game-layout) .board-side-controls .accept-beg-takeback-button {
+    transform: none;
+  }
+
+  .game-layout:not(.team-game-layout) .board-side-controls .media-actions button,
+  .game-layout:not(.team-game-layout) .board-side-actions button,
+  .game-layout:not(.team-game-layout) .board-side-controls .face-mesh-button {
+    min-height: 34px;
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+
+  .game-layout:not(.team-game-layout) .turn-status-button,
+  .game-layout:not(.team-game-layout) .takeback-request-button,
+  .game-layout:not(.team-game-layout) .accept-beg-takeback-button {
+    min-height: 40px;
+    padding: 7px 8px;
+    font-size: 13px;
+  }
+
+  .game-layout:not(.team-game-layout) .turn-custom-sound-button {
+    min-height: 46px;
+    padding: 7px 8px;
+  }
+
+  .game-layout:not(.team-game-layout) .turn-custom-sound-button span {
+    font-size: 11px;
+  }
+
+  .game-layout:not(.team-game-layout) .turn-custom-sound-button strong {
+    font-size: 10px;
+  }
+
+  .game-layout:not(.team-game-layout) .eval-bar,
+  .game-layout:not(.team-game-layout) .board-animation-slots {
+    display: none;
+  }
+
+  .board-wrap:not(.team-game) > .board-player-top,
+  .board-wrap:not(.team-game) > .board-player-bottom {
+    top: 0;
+    width: min(276px, 100%);
+    max-width: min(276px, 100%);
+    min-height: 54px;
+    padding: 5px 7px;
+  }
+
+  .board-wrap:not(.team-game) > .board-player-bottom {
+    z-index: 3;
+  }
+
+  .board-wrap:not(.team-game) > .board-player-top b,
+  .board-wrap:not(.team-game) > .board-player-bottom b {
+    font-size: 18px;
+  }
+
+  .game-layout:not(.team-game-layout) .video-grid {
+    height: var(--play-surface-size);
+  }
+
+  .game-layout:not(.team-game-layout) .game-chat {
+    padding: 10px;
+  }
+
+  .game-layout:not(.team-game-layout) .game-chat-messages {
+    height: 118px;
+  }
+
+  .game-layout:not(.team-game-layout) .game-chat-form {
+    grid-template-columns: minmax(0, 1fr) 40px auto;
+    gap: 6px;
+  }
+
+  .game-layout:not(.team-game-layout) .game-chat-form input,
+  .game-layout:not(.team-game-layout) .game-chat-form button {
+    min-height: 38px;
+  }
+}
+
 @media (max-width: 1180px) {
   .game-layout.team-game-layout {
-    grid-template-columns: minmax(560px, 1fr) minmax(380px, 460px);
+    --video-column-size: clamp(320px, 34vw, 440px);
+    --side-controls-size: clamp(104px, 10vw, 140px);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, var(--video-column-size));
   }
 
   .team-video-grid .video-tile {
-    min-height: 168px;
+    min-height: 150px;
   }
 }
 
