@@ -40,10 +40,6 @@ body {
     linear-gradient(135deg, #030607 0%, #101817 42%, #050709 100%);
 }
 
-body:has(#gameLayout:not(.hidden)) {
-  overflow-x: hidden;
-}
-
 body::before {
   content: "";
   position: fixed;
@@ -1515,11 +1511,6 @@ input[type="file"] {
   align-items: start;
 }
 
-body:has(#gameLayout:not(.hidden)) .shell {
-  width: calc(100vw - 12px);
-  max-width: none;
-}
-
 .game-layout.team-game-layout {
   --video-column-size: clamp(360px, 28vw, 540px);
   --side-controls-size: clamp(118px, 8vw, 160px);
@@ -1545,7 +1536,7 @@ body:has(#gameLayout:not(.hidden)) .shell {
 
 .game-layout:not(.team-game-layout) .board-wrap {
   width: min(100%, calc(var(--side-controls-size) + var(--play-surface-size) + 26px));
-  justify-self: center;
+  justify-self: end;
   padding: 10px;
   padding-right: 0;
   overflow: hidden;
@@ -1582,7 +1573,7 @@ body:has(#gameLayout:not(.hidden)) .shell {
 
 .board-wrap.team-game {
   width: min(100%, calc(var(--side-controls-size) + var(--play-surface-size) + 26px));
-  justify-self: center;
+  justify-self: end;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto auto auto auto auto;
   grid-template-areas:
