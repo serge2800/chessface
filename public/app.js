@@ -167,6 +167,7 @@ const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
 const APP_VERSION = "2026-07-13-ipad-webrtc-v1";
+const STYLE_VERSION = "2026-07-13-dynamic-game-layout-v2";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -296,6 +297,19 @@ const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get("verified") === "1") {
   authNotice.textContent = "Email confirmed. You can log in now.";
 }
+
+function ensureFreshAssetLinks() {
+  const stylesheet = document.querySelector('link[rel="stylesheet"][href^="styles.css"]');
+  if (stylesheet && !stylesheet.href.includes(`v=${STYLE_VERSION}`)) {
+    stylesheet.href = `styles.css?v=${encodeURIComponent(STYLE_VERSION)}`;
+  }
+  const currentScript = document.currentScript;
+  if (currentScript?.src && !currentScript.src.includes(`v=${APP_VERSION}`)) {
+    currentScript.dataset.loadedFromStaleHtml = "true";
+  }
+}
+
+ensureFreshAssetLinks();
 
 const matchmakingCaptions = [
   "Checking video-ready opponents",
