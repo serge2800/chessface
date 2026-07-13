@@ -4393,6 +4393,31 @@ body[data-board-theme="wood"] {
   }
 }
 
+@media (min-width: 961px) {
+  body:has(#gameLayout:not(.hidden)) .game-layout:not(.team-game-layout) {
+    --video-column-size: clamp(360px, 29vw, 500px);
+    --side-controls-size: clamp(118px, 8vw, 150px);
+    --play-surface-size: min(calc(100vh - 176px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 56px), 760px);
+    --play-surface-size: min(calc(100dvh - 176px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 56px), 760px);
+    --board-column-size: calc(var(--side-controls-size) + var(--play-surface-size) + 18px);
+    width: max-content;
+    max-width: 100%;
+    grid-template-columns: var(--board-column-size) var(--video-column-size) !important;
+    justify-content: start !important;
+    gap: 8px !important;
+  }
+
+  body:has(#gameLayout:not(.hidden)) .game-layout:not(.team-game-layout) .board-wrap {
+    width: var(--board-column-size) !important;
+    justify-self: start !important;
+  }
+
+  body:has(#gameLayout:not(.hidden)) .game-layout:not(.team-game-layout) .video-panel {
+    width: var(--video-column-size) !important;
+    justify-self: start !important;
+  }
+}
+
 @media (max-width: 760px) {
   .board-wrap.team-game {
     grid-template-columns: 1fr;
