@@ -4033,9 +4033,9 @@ body.in-game .game-layout:not(.team-game-layout) {
   --eval-bar-size: 14px;
   --player-card-height: 62px;
   --layout-gap: 12px;
-  --play-viewport-height: calc(100dvh - 12px);
+  --play-viewport-height: 100dvh;
   --play-surface-size: min(
-    calc(var(--play-viewport-height) - 24px),
+    calc(var(--play-viewport-height) - 2px),
     calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 46px),
     940px
   );
@@ -4053,7 +4053,7 @@ body.in-game .game-layout:not(.team-game-layout) {
 body.in-game .game-layout:not(.team-game-layout) .board-wrap {
   height: auto;
   grid-template-columns: var(--side-controls-size) var(--donkey-rail-size) var(--eval-bar-size) var(--play-surface-size);
-  grid-template-rows: var(--player-card-height) var(--play-surface-size) var(--player-card-height);
+  grid-template-rows: var(--player-card-height) var(--play-surface-size);
   gap: 8px 8px;
   align-content: start;
   justify-content: start;
@@ -4078,8 +4078,7 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  display: none;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-stage {
@@ -4237,7 +4236,7 @@ body.in-game .game-layout:not(.team-game-layout) .game-chat {
     --donkey-rail-size: clamp(154px, 11.5vw, 190px);
     --eval-bar-size: 12px;
     --play-surface-size: min(
-      calc(var(--play-viewport-height) - 24px),
+      calc(var(--play-viewport-height) - 2px),
       calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 40px),
       860px
     );
@@ -4250,7 +4249,7 @@ body.in-game .game-layout:not(.team-game-layout) .game-chat {
     --side-controls-size: clamp(104px, 10vw, 124px);
     --donkey-rail-size: clamp(143px, 14vw, 168px);
     --play-surface-size: min(
-      calc(var(--play-viewport-height) - 24px),
+      calc(var(--play-viewport-height) - 2px),
       calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 10px),
       760px
     );
