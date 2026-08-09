@@ -166,8 +166,8 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-08-09-clean-game-layout-v2";
-const STYLE_VERSION = "2026-08-09-clean-game-layout-v2";
+const APP_VERSION = "2026-08-10-play-surface-v1";
+const STYLE_VERSION = "2026-08-10-play-surface-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -946,6 +946,7 @@ async function enterGame(game, { intro = false } = {}) {
   gameLayout.classList.remove("hidden");
   renderGame(game);
   updateDonkeyMoods(0);
+  scrollGameIntoViewOnStart();
   sendSoundSettings();
   await startMediaAndPeer();
 }
@@ -963,12 +964,9 @@ function resetIncomingGameBoardState() {
 
 function scrollGameIntoViewOnStart() {
   const alignToGameTop = () => {
-    const targets = [
-      document.querySelector(".board-stage"),
-      document.querySelector(".video-panel")
-    ].filter((element) => element && element.getClientRects().length);
-    if (!targets.length) return;
-    const top = Math.min(...targets.map((element) => element.getBoundingClientRect().top));
+    const target = document.querySelector(".board-stage") || document.querySelector(".video-grid");
+    if (!target || !target.getClientRects().length) return;
+    const top = target.getBoundingClientRect().top;
     const scrollTop = Math.max(0, window.scrollY + top);
     window.scrollTo({ top: scrollTop, behavior: "smooth" });
   };
