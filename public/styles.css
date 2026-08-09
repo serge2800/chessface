@@ -4029,14 +4029,14 @@ body.in-game .topbar {
 body.in-game .game-layout:not(.team-game-layout) {
   --video-column-size: clamp(370px, 27vw, 560px);
   --side-controls-size: clamp(148px, 9vw, 184px);
-  --donkey-rail-size: clamp(156px, 9.4vw, 210px);
+  --donkey-rail-size: clamp(196px, 12vw, 260px);
   --eval-bar-size: 14px;
   --player-card-height: 62px;
   --layout-gap: 12px;
   --play-viewport-height: calc(100dvh - 12px);
   --play-surface-size: min(
     calc(var(--play-viewport-height) - 24px),
-    calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 104px),
+    calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 46px),
     940px
   );
   --camera-stack-extra: 0px;
@@ -4044,7 +4044,7 @@ body.in-game .game-layout:not(.team-game-layout) {
   min-height: var(--play-viewport-height);
   grid-template-columns: minmax(0, calc(var(--side-controls-size) + var(--donkey-rail-size) + var(--eval-bar-size) + var(--play-surface-size) + 46px)) minmax(340px, var(--video-column-size));
   gap: var(--layout-gap);
-  justify-content: center;
+  justify-content: end;
   align-items: start;
   overflow: visible;
   scroll-margin-top: 0;
@@ -4234,11 +4234,11 @@ body.in-game .game-layout:not(.team-game-layout) .game-chat {
   body.in-game .game-layout:not(.team-game-layout) {
     --video-column-size: clamp(340px, 28vw, 420px);
     --side-controls-size: clamp(120px, 9vw, 148px);
-    --donkey-rail-size: clamp(118px, 8.6vw, 150px);
+    --donkey-rail-size: clamp(154px, 11.5vw, 190px);
     --eval-bar-size: 12px;
     --play-surface-size: min(
       calc(var(--play-viewport-height) - 24px),
-      calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 76px),
+      calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 40px),
       860px
     );
   }
@@ -4248,12 +4248,57 @@ body.in-game .game-layout:not(.team-game-layout) .game-chat {
   body.in-game .game-layout:not(.team-game-layout) {
     --video-column-size: clamp(286px, 31vw, 360px);
     --side-controls-size: clamp(104px, 10vw, 124px);
-    --donkey-rail-size: clamp(96px, 8.8vw, 112px);
+    --donkey-rail-size: clamp(143px, 14vw, 168px);
     --play-surface-size: min(
       calc(var(--play-viewport-height) - 24px),
-      calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 58px),
+      calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - var(--eval-bar-size) - 10px),
       760px
     );
+  }
+}
+
+@media (max-width: 1100px) and (orientation: portrait) {
+  body.in-game .game-layout:not(.team-game-layout) {
+    --play-surface-size: min(calc(100vw - 32px), 760px);
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    justify-content: stretch;
+    padding: 0 12px;
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .board-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--player-card-height) auto var(--player-card-height);
+    justify-self: center;
+    width: min(100%, calc(var(--play-surface-size) + 24px));
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .board-stage {
+    grid-template-columns: var(--play-surface-size);
+    justify-content: center;
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .board-stage > .board {
+    grid-column: 1;
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .eval-bar,
+  body.in-game .game-layout:not(.team-game-layout) .board-side-controls,
+  body.in-game .game-layout:not(.team-game-layout) .board-animation-slots {
+    display: none !important;
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .video-panel {
+    width: min(100%, var(--play-surface-size));
+    margin-top: 0;
+    justify-self: center;
+  }
+}
+
+@media (min-width: 1900px) {
+  body.in-game .game-layout:not(.team-game-layout) {
+    --donkey-rail-size: clamp(290px, 16vw, 340px);
   }
 }
 
