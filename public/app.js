@@ -166,8 +166,8 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-07-13-ipad-webrtc-v1";
-const STYLE_VERSION = "2026-07-13-dynamic-game-layout-v2";
+const APP_VERSION = "2026-08-09-restore-game-layout-v1";
+const STYLE_VERSION = "2026-08-09-restore-game-layout-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -942,13 +942,12 @@ async function enterGame(game, { intro = false } = {}) {
   seekTeamButton.disabled = false;
   cancelSeekButton.classList.add("hidden");
   hideMatchIntro();
+  document.body.classList.add("in-game");
   gameLayout.classList.remove("hidden");
   renderGame(game);
   updateDonkeyMoods(0);
-  scrollGameIntoViewOnStart();
   sendSoundSettings();
   await startMediaAndPeer();
-  scrollGameIntoViewOnStart();
 }
 
 function resetIncomingGameBoardState() {
@@ -4425,6 +4424,7 @@ function resetToLobby() {
   selectedSquare = null;
   clearTimeTrouble();
   hideMatchIntro();
+  document.body.classList.remove("in-game");
   gameLayout.classList.add("hidden");
   lobby.classList.remove("hidden");
   statusTitle.textContent = "Choose a time control";
@@ -4446,6 +4446,7 @@ function logout() {
   renderGameChat();
   clearTimeTrouble();
   hideMatchIntro();
+  document.body.classList.remove("in-game");
   appView.classList.add("hidden");
   authView.classList.remove("hidden");
   authForm.reset();
