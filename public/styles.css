@@ -4024,24 +4024,172 @@ body.in-game .topbar {
 }
 
 body.in-game .game-layout:not(.team-game-layout) {
-  --play-surface-size: min(calc(100dvh - 220px), calc(100vw - 450px), 760px);
+  --video-column-size: clamp(390px, 30vw, 560px);
+  --side-controls-size: clamp(248px, 16vw, 310px);
+  --eval-width: 14px;
+  --player-card-height: 54px;
+  --play-surface-size: min(
+    calc(100dvh - (var(--player-card-height) * 2) - 36px),
+    calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--eval-width) - 18px),
+    820px
+  );
   --camera-stack-extra: 0px;
   height: calc(100dvh - 12px);
+  grid-template-columns: minmax(0, calc(var(--side-controls-size) + var(--eval-width) + var(--play-surface-size) + 8px)) minmax(360px, var(--video-column-size));
+  justify-content: center;
+  align-items: stretch;
   overflow: hidden;
 }
 
+body.in-game .game-layout:not(.team-game-layout) .board-wrap {
+  height: 100%;
+  grid-template-columns: var(--side-controls-size) var(--eval-width) var(--play-surface-size);
+  grid-template-rows: var(--player-card-height) var(--play-surface-size) var(--player-card-height);
+  gap: 6px 0;
+  align-content: center;
+  justify-content: center;
+  padding: 6px 0 6px 8px;
+  overflow: hidden;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  height: var(--player-card-height);
+  justify-self: stretch;
+  top: 0;
+  padding: 6px 8px;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-stage {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  grid-template-columns: var(--side-controls-size) var(--eval-width) var(--play-surface-size);
+  gap: 0;
+  align-self: stretch;
+  justify-self: stretch;
+  justify-content: start;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-stage > .board {
+  grid-column: 3;
+  width: var(--play-surface-size);
+  max-width: 100%;
+  margin-top: 0;
+  justify-self: stretch;
+  transform: none !important;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .eval-bar {
+  position: relative;
+  top: auto;
+  right: auto;
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  width: var(--eval-width);
+  height: var(--play-surface-size);
+  align-self: stretch;
+  transform: none !important;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls {
+  grid-column: 1;
+  height: var(--play-surface-size);
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) clamp(96px, 7vw, 126px);
+  grid-auto-rows: min-content;
+  gap: 5px;
+  align-content: start;
+  margin-top: 0;
+  padding-top: 0;
+  padding-right: 8px;
+  overflow: hidden;
+  transform: none;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .media-actions,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .board-side-actions,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .turn-random-sound,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .turn-custom-sound,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .face-mesh-button,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .takeback-request-button,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .turn-status-button,
+body.in-game .game-layout:not(.team-game-layout) .board-side-controls .accept-beg-takeback-button {
+  grid-column: 1;
+  transform: none;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-animation-slots {
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / span 8;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  pointer-events: none;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-animation-slot {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-animation-slot-middle {
+  display: none;
+}
+
 body.in-game .game-layout:not(.team-game-layout) .video-panel {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   align-content: start;
   gap: 8px;
+  padding: 6px 8px 6px 0;
+  overflow: hidden;
+  transform: none;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .video-grid {
+  height: auto;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+body.in-game .game-layout:not(.team-game-layout) .video-tile {
+  min-height: 0;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .game-chat {
+  min-height: 0;
+  max-height: 210px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px;
   padding: 10px;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .game-chat-messages {
-  height: clamp(72px, 13dvh, 118px);
+  height: clamp(62px, 10dvh, 92px);
+  min-height: 0;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .game-chat-form input,
