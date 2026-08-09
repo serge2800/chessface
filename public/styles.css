@@ -4026,13 +4026,18 @@ body.in-game .topbar {
 body.in-game .game-layout:not(.team-game-layout) {
   --video-column-size: clamp(360px, 29vw, 520px);
   --side-controls-size: clamp(150px, 10vw, 188px);
+  --donkey-rail-size: clamp(92px, 6.4vw, 122px);
   --player-card-height: 62px;
   --layout-gap: 12px;
-  --play-surface-size: min(calc(100dvh - 158px), calc(100vw - var(--video-column-size) - var(--side-controls-size) - 92px), 720px);
+  --play-surface-size: min(
+    calc(100dvh - 184px),
+    calc(100vw - var(--video-column-size) - var(--side-controls-size) - var(--donkey-rail-size) - 112px),
+    690px
+  );
   --camera-stack-extra: 0px;
   --board-top-lift: 0px;
   height: calc(100dvh - 12px);
-  grid-template-columns: minmax(0, calc(var(--side-controls-size) + var(--play-surface-size) + 26px)) minmax(320px, var(--video-column-size));
+  grid-template-columns: minmax(0, calc(var(--side-controls-size) + var(--donkey-rail-size) + var(--play-surface-size) + 38px)) minmax(320px, var(--video-column-size));
   gap: var(--layout-gap);
   justify-content: center;
   align-items: start;
@@ -4041,9 +4046,9 @@ body.in-game .game-layout:not(.team-game-layout) {
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap {
   height: auto;
-  grid-template-columns: var(--side-controls-size) var(--play-surface-size);
+  grid-template-columns: var(--side-controls-size) var(--donkey-rail-size) var(--play-surface-size);
   grid-template-rows: var(--player-card-height) var(--play-surface-size) var(--player-card-height);
-  gap: 8px 10px;
+  gap: 8px 8px;
   align-content: start;
   justify-content: start;
   padding: 10px 12px;
@@ -4074,15 +4079,15 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bot
 body.in-game .game-layout:not(.team-game-layout) .board-stage {
   grid-column: 1 / -1;
   grid-row: 2;
-  grid-template-columns: var(--side-controls-size) var(--play-surface-size);
-  gap: 10px;
+  grid-template-columns: var(--side-controls-size) var(--donkey-rail-size) var(--play-surface-size);
+  gap: 8px;
   align-self: stretch;
   justify-self: stretch;
   justify-content: start;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-stage > .board {
-  grid-column: 2;
+  grid-column: 3;
   width: var(--play-surface-size);
   max-width: 100%;
   margin-top: 0;
@@ -4124,7 +4129,16 @@ body.in-game .game-layout:not(.team-game-layout) .board-side-controls .accept-be
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-animation-slots {
-  display: none !important;
+  position: relative;
+  inset: auto;
+  grid-column: 2;
+  grid-row: 1;
+  width: var(--donkey-rail-size);
+  height: var(--play-surface-size);
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  pointer-events: none;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-animation-slot {
@@ -4134,6 +4148,7 @@ body.in-game .game-layout:not(.team-game-layout) .board-animation-slot {
   width: 100%;
   height: auto;
   min-height: 0;
+  border-radius: 4px;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-animation-slot-middle {
