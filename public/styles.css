@@ -4032,6 +4032,7 @@ body.in-game .game-layout:not(.team-game-layout) {
   --donkey-rail-size: clamp(196px, 12vw, 260px);
   --eval-bar-size: 14px;
   --player-card-height: 62px;
+  --rail-player-card-height: 74px;
   --layout-gap: 12px;
   --play-viewport-height: 100dvh;
   --play-surface-size: min(
@@ -4051,9 +4052,10 @@ body.in-game .game-layout:not(.team-game-layout) {
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap {
+  position: relative;
   height: auto;
   grid-template-columns: var(--side-controls-size) var(--donkey-rail-size) var(--eval-bar-size) var(--play-surface-size);
-  grid-template-rows: var(--player-card-height) var(--play-surface-size);
+  grid-template-rows: var(--play-surface-size);
   gap: 8px 8px;
   align-content: start;
   justify-content: start;
@@ -4063,27 +4065,73 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap {
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top,
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
-  width: min(360px, 100%);
-  max-width: 100%;
+  position: absolute;
+  left: 12px;
+  z-index: 12;
+  width: var(--side-controls-size);
+  max-width: var(--side-controls-size);
   min-height: 0;
-  height: var(--player-card-height);
+  height: var(--rail-player-card-height);
+  grid-template-columns: 30px minmax(0, 1fr);
   justify-self: start;
-  top: 0;
-  padding: 6px 8px;
+  padding: 6px 7px;
+  overflow: hidden;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top {
-  grid-column: 1 / -1;
-  grid-row: 1;
+  top: 10px;
+  bottom: auto;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
-  display: none;
+  top: auto;
+  bottom: calc(var(--rail-player-card-height) + 10px);
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top img,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom img {
+  width: 30px;
+  height: 30px;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top > div,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom > div {
+  min-width: 0;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top strong,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom strong {
+  min-width: 0;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top strong span,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom strong span {
+  display: block;
+  overflow: hidden;
+  font-size: clamp(10px, calc(var(--side-controls-size) / 12), 14px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top span,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom span,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top .captured-row,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom .captured-row {
+  font-size: clamp(9px, calc(var(--side-controls-size) / 15), 12px);
+  line-height: 1.1;
+}
+
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top b,
+body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom b {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin-top: -2px;
+  font-size: clamp(16px, calc(var(--side-controls-size) / 8), 24px);
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-stage {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 1;
   grid-template-columns: var(--side-controls-size) var(--donkey-rail-size) var(--eval-bar-size) var(--play-surface-size);
   gap: 8px;
   align-self: stretch;
@@ -4120,9 +4168,9 @@ body.in-game .game-layout:not(.team-game-layout) .board-side-controls {
   grid-template-columns: minmax(0, 1fr);
   grid-auto-rows: min-content;
   gap: 5px;
-  align-content: start;
+  align-content: center;
   margin-top: 0;
-  padding-top: 0;
+  padding: calc(var(--rail-player-card-height) + 14px) 0;
   padding-right: 0;
   overflow: hidden;
   transform: none;
@@ -4204,7 +4252,7 @@ body.in-game .game-layout:not(.team-game-layout) .video-panel {
   grid-template-rows: var(--play-surface-size) auto;
   align-content: start;
   gap: 14px;
-  margin-top: calc(var(--player-card-height) + 8px);
+  margin-top: 0;
   padding: 10px 12px 0;
   overflow: visible;
   transform: none;
@@ -4271,6 +4319,14 @@ body.in-game .game-layout:not(.team-game-layout) .game-chat {
     grid-template-rows: var(--player-card-height) auto var(--player-card-height);
     justify-self: center;
     width: min(100%, calc(var(--play-surface-size) + 24px));
+  }
+
+  body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top,
+  body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
+    position: static;
+    display: grid;
+    width: min(100%, var(--play-surface-size));
+    max-width: min(100%, var(--play-surface-size));
   }
 
   body.in-game .game-layout:not(.team-game-layout) .board-stage {
