@@ -85,18 +85,19 @@
   }
 
   function drawKnight(svg, colors) {
-    add(svg, "path", shapeAttrs(colors, {
+    const knight = add(svg, "g", { transform: "translate(100 0) scale(-1 1)" });
+    add(knight, "path", shapeAttrs(colors, {
       d: "M31 72 C34 57 38 49 33 37 C41 23 56 19 69 30 C63 33 63 39 67 45 C61 46 58 48 55 53 C52 58 47 60 41 60 C45 64 50 67 58 72 Z"
     }));
-    add(svg, "path", {
+    add(knight, "path", {
       d: "M42 34 C45 37 47 39 49 42",
       fill: "none",
       stroke: colors.detail,
       "stroke-width": "3",
       "stroke-linecap": "round"
     });
-    add(svg, "circle", { cx: "55", cy: "35", r: "2.4", fill: colors.stroke });
-    addBase(svg, colors);
+    add(knight, "circle", { cx: "55", cy: "35", r: "2.4", fill: colors.stroke });
+    addBase(knight, colors);
   }
 
   function drawBishop(svg, colors) {
