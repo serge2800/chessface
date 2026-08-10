@@ -4079,13 +4079,13 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bot
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top {
-  top: 21px;
+  top: 20px;
   bottom: auto;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
   top: auto;
-  bottom: 63px;
+  bottom: 65px;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top img,
@@ -4124,8 +4124,8 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bot
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top b,
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom b {
   grid-column: 1 / -1;
-  justify-self: end;
-  margin-top: -2px;
+  justify-self: center;
+  margin-top: -7px;
   font-size: clamp(16px, calc(var(--side-controls-size) / 8), 24px);
 }
 
