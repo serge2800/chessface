@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-08-10-left-rail-no-white-lines-v2" />
+    <link rel="stylesheet" href="styles.css?v=2026-08-10-checkmate-reveal-v1" />
   </head>
   <body>
     <main class="shell">
@@ -369,6 +369,14 @@
         </section>
       </section>
 
+      <section class="checkmate-celebration hidden" id="checkmateCelebration" aria-live="assertive" aria-label="Checkmate">
+        <div class="checkmate-card">
+          <p class="eyebrow">Checkmate</p>
+          <h2 id="checkmateCelebrationTitle">Checkmate!</h2>
+          <p id="checkmateCelebrationMessage">You won by checkmate!</p>
+        </div>
+      </section>
+
       <section class="game-result-modal hidden" id="gameResultModal" aria-label="Game result" aria-modal="true" role="dialog">
         <div class="game-result-card">
           <div class="accuracy-hero">
@@ -518,8 +526,8 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="config/sounds.js?v=2026-08-10-left-rail-no-white-lines-v2"></script>
+    <script src="config/sounds.js?v=2026-08-10-checkmate-reveal-v1"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-08-10-left-rail-no-white-lines-v2"></script>
+    <script src="app.js?v=2026-08-10-checkmate-reveal-v1"></script>
   </body>
 </html>

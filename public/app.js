@@ -132,6 +132,9 @@ const acceptRematchButton = document.querySelector("#acceptRematchButton");
 const declineRematchButton = document.querySelector("#declineRematchButton");
 const accuracyAnalysisStatus = document.querySelector("#accuracyAnalysisStatus");
 const accuracyAnalysisPanel = document.querySelector("#accuracyAnalysisPanel");
+const checkmateCelebration = document.querySelector("#checkmateCelebration");
+const checkmateCelebrationTitle = document.querySelector("#checkmateCelebrationTitle");
+const checkmateCelebrationMessage = document.querySelector("#checkmateCelebrationMessage");
 
 const pieceMap = {
   p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚",
@@ -166,14 +169,16 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-08-10-left-rail-no-white-lines-v2";
-const STYLE_VERSION = "2026-08-10-left-rail-no-white-lines-v2";
+const APP_VERSION = "2026-08-10-checkmate-reveal-v1";
+const STYLE_VERSION = "2026-08-10-checkmate-reveal-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
 const BAD_BLUNDER_CP_DROP = 350;
 const FACE_ZOOM_MS = 1000;
 const MATCH_INTRO_MS = 2000;
+const CHECKMATE_BOARD_REVEAL_MS = 1100;
+const CHECKMATE_CELEBRATION_MS = 1900;
 const MATCH_INTRO_SOUND_URL = "/assets/ninja-intro.m4a?v=2026-07-13";
 const TIME_TROUBLE_SECONDS = 10;
 const HEARTBEAT_COOLDOWN_MS = 850;
@@ -193,6 +198,11 @@ let me;
 let appShown = false;
 let selectedTime = "5+0";
 let currentGame;
+let pendingCheckmateResultKey = "";
+let pendingCheckmateResultTimer = null;
+let pendingCheckmateCelebrationTimer = null;
+const shownCheckmateResultKeys = new Set();
+const finalizedLocalRatingGameIds = new Set();
 let boardHistoryIndex = null;
 let postGameVideoTimer;
 let postGameTimeControl = "5+0";
@@ -920,6 +930,7 @@ function handleSocketConnectError(error) {
 
 async function enterGame(game, { intro = false } = {}) {
   clearPostGameVideoTimer();
+  clearPendingCheckmateResult();
   resetIncomingGameBoardState();
   gameResultModal?.classList.add("hidden");
   rematchRequestModal?.classList.add("hidden");
@@ -959,6 +970,7 @@ function resetIncomingGameBoardState() {
   if (board) board.innerHTML = "";
   accuracyAnalysisRunId += 1;
   analyzingAccuracyGameId = "";
+  hideCheckmateCelebration();
 }
 
 function scrollGameIntoViewOnStart() {
@@ -1298,16 +1310,80 @@ function renderGame(game) {
   maybePlayPendingPremove(game, myTurn);
 
   if (game.status === "finished") {
-    postGameTimeControl = game.timeControl || postGameTimeControl || selectedTime;
-    maybeShowGameResultDialog(game);
-    updateRematchButton(game);
-    maybeStartAccuracyAnalysis(game);
-    if (game.kind !== "team") {
-      me.rating = game.color === "white" ? game.players.white.rating : game.players.black.rating;
-      me.gamesPlayed = (me.gamesPlayed || 0) + 1;
-      document.querySelector("#myRating").textContent = `${me.rating} rating · ${me.gamesPlayed} games`;
-    }
+    handleFinishedGame(game);
   }
+}
+
+function handleFinishedGame(game) {
+  if (shouldDelayCheckmateResult(game)) {
+    scheduleCheckmateResult(game);
+    return;
+  }
+  finalizeFinishedGame(game);
+}
+
+function finalizeFinishedGame(game) {
+  postGameTimeControl = game.timeControl || postGameTimeControl || selectedTime;
+  maybeShowGameResultDialog(game);
+  updateRematchButton(game);
+  maybeStartAccuracyAnalysis(game);
+  if (game.kind !== "team" && !finalizedLocalRatingGameIds.has(game.id)) {
+    finalizedLocalRatingGameIds.add(game.id);
+    me.rating = game.color === "white" ? game.players.white.rating : game.players.black.rating;
+    me.gamesPlayed = (me.gamesPlayed || 0) + 1;
+    document.querySelector("#myRating").textContent = `${me.rating} rating · ${me.gamesPlayed} games`;
+  }
+}
+
+function shouldDelayCheckmateResult(game) {
+  if (!game || game.status !== "finished" || game.reason !== "checkmate") return false;
+  return !shownCheckmateResultKeys.has(checkmateResultKey(game));
+}
+
+function checkmateResultKey(game) {
+  return `${game.id}:${game.result}:checkmate`;
+}
+
+function scheduleCheckmateResult(game) {
+  const key = checkmateResultKey(game);
+  if (pendingCheckmateResultKey === key) return;
+  clearPendingCheckmateResult();
+  pendingCheckmateResultKey = key;
+  pendingCheckmateResultTimer = window.setTimeout(() => {
+    showCheckmateCelebration(game);
+    pendingCheckmateCelebrationTimer = window.setTimeout(() => {
+      shownCheckmateResultKeys.add(key);
+      pendingCheckmateResultKey = "";
+      hideCheckmateCelebration();
+      const latestGame = currentGame?.id === game.id ? currentGame : game;
+      finalizeFinishedGame(latestGame);
+    }, CHECKMATE_CELEBRATION_MS);
+  }, CHECKMATE_BOARD_REVEAL_MS);
+}
+
+function clearPendingCheckmateResult() {
+  if (pendingCheckmateResultTimer) window.clearTimeout(pendingCheckmateResultTimer);
+  if (pendingCheckmateCelebrationTimer) window.clearTimeout(pendingCheckmateCelebrationTimer);
+  pendingCheckmateResultTimer = null;
+  pendingCheckmateCelebrationTimer = null;
+  pendingCheckmateResultKey = "";
+  hideCheckmateCelebration();
+}
+
+function showCheckmateCelebration(game) {
+  if (!checkmateCelebration) return;
+  const won = game.result && game.result === game.color;
+  checkmateCelebration.classList.toggle("is-win", Boolean(won));
+  checkmateCelebration.classList.toggle("is-loss", !won);
+  if (checkmateCelebrationTitle) checkmateCelebrationTitle.textContent = "Checkmate!";
+  if (checkmateCelebrationMessage) {
+    checkmateCelebrationMessage.textContent = won ? "You won by checkmate!" : "You are checkmated.";
+  }
+  checkmateCelebration.classList.remove("hidden");
+}
+
+function hideCheckmateCelebration() {
+  checkmateCelebration?.classList.add("hidden");
 }
 
 function maybeShowGameResultDialog(game) {
