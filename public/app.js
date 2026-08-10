@@ -118,6 +118,7 @@ const gameResultContinueVideoButton = document.querySelector("#gameResultContinu
 const gameResultEndCallButton = document.querySelector("#gameResultEndCallButton");
 const gameResultAnalysisButton = document.querySelector("#gameResultAnalysisButton");
 const gameResultShareButton = document.querySelector("#gameResultShareButton");
+const gameResultCloseButton = document.querySelector("#gameResultCloseButton");
 const resultSharePanel = document.querySelector("#resultSharePanel");
 const resultShareLink = document.querySelector("#resultShareLink");
 const copyResultLinkButton = document.querySelector("#copyResultLinkButton");
@@ -169,8 +170,8 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-08-10-checkmate-reveal-v1";
-const STYLE_VERSION = "2026-08-10-checkmate-reveal-v1";
+const APP_VERSION = "2026-08-10-result-close-v1";
+const STYLE_VERSION = "2026-08-10-result-close-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -205,6 +206,7 @@ const shownCheckmateResultKeys = new Set();
 const finalizedLocalRatingGameIds = new Set();
 let boardHistoryIndex = null;
 let postGameVideoTimer;
+let postGameResultReopenTimer;
 let postGameTimeControl = "5+0";
 let pendingRematchGameId = null;
 let liveEvalWorker = null;
@@ -590,6 +592,7 @@ gameResultContinueVideoButton?.addEventListener("click", continuePostGameVideoTe
 gameResultEndCallButton?.addEventListener("click", endPostGameAndCall);
 gameResultAnalysisButton?.addEventListener("click", openCurrentGameAnalysis);
 gameResultShareButton?.addEventListener("click", shareAccuracyResult);
+gameResultCloseButton?.addEventListener("click", closePostGameResultTemporarily);
 copyResultLinkButton?.addEventListener("click", () => copyResultShareText({ social: false }));
 copySocialResultButton?.addEventListener("click", () => copyResultShareText({ social: true }));
 facebookShareResultButton?.addEventListener("click", () => openShareUrl("facebook"));
@@ -1689,9 +1692,15 @@ function clearPostGameVideoTimer() {
   postGameVideoTimer = null;
 }
 
+function clearPostGameResultReopenTimer() {
+  clearTimeout(postGameResultReopenTimer);
+  postGameResultReopenTimer = null;
+}
+
 function requestPostGameRematch() {
   if (!currentGame?.id) return;
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   socket?.emit("game:rematch", { gameId: currentGame.id });
   updateRematchButton({ ...currentGame, rematch: { ...currentGame.rematch, requestedByViewer: true } });
   showNotice("Rematch requested. Waiting for your opponent.");
@@ -1712,6 +1721,7 @@ function acceptIncomingRematch() {
   rematchRequestModal?.classList.add("hidden");
   pendingRematchGameId = null;
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   socket?.emit("game:rematch", { gameId });
   showNotice("Rematch accepted.");
 }
@@ -1725,6 +1735,7 @@ function goToDashboardFromPostGame() {
 function continuePostGameVideoTemporarily() {
   gameResultModal?.classList.add("hidden");
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   showNotice("Video will stay on for 2 minutes. Rematch stays available.");
   postGameVideoTimer = setTimeout(() => {
     if (!currentGame || currentGame.status !== "finished") return;
@@ -1736,8 +1747,24 @@ function continuePostGameVideoTemporarily() {
 
 function endPostGameAndCall() {
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   gameResultModal?.classList.add("hidden");
   resetToLobby();
+}
+
+function closePostGameResultTemporarily() {
+  if (!currentGame || currentGame.status !== "finished") {
+    gameResultModal?.classList.add("hidden");
+    return;
+  }
+  gameResultModal?.classList.add("hidden");
+  clearPostGameResultReopenTimer();
+  showNotice("Result hidden for 2 minutes so you can review the board and talk.");
+  postGameResultReopenTimer = setTimeout(() => {
+    if (!currentGame || currentGame.status !== "finished") return;
+    gameResultModal?.classList.remove("hidden");
+    postGameResultReopenTimer = null;
+  }, 120000);
 }
 
 function updateTurnRandomSoundButton(game, myTurn) {
@@ -4487,6 +4514,7 @@ function closePeer() {
 
 function resetToLobby() {
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   closePeer();
   currentGame = null;
   gameChat = [];
@@ -4505,6 +4533,7 @@ function resetToLobby() {
 
 function logout() {
   clearPostGameVideoTimer();
+  clearPostGameResultReopenTimer();
   closePeer();
   if (socket) socket.disconnect();
   localStorage.removeItem("chessface:token");

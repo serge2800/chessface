@@ -12,7 +12,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/app-icon.svg" />
-    <link rel="stylesheet" href="styles.css?v=2026-08-10-checkmate-reveal-v1" />
+    <link rel="stylesheet" href="styles.css?v=2026-08-10-result-close-v1" />
   </head>
   <body>
     <main class="shell">
@@ -379,6 +379,7 @@
 
       <section class="game-result-modal hidden" id="gameResultModal" aria-label="Game result" aria-modal="true" role="dialog">
         <div class="game-result-card">
+          <button type="button" class="game-result-close" id="gameResultCloseButton" aria-label="Close result and return to board">×</button>
           <div class="accuracy-hero">
             <p class="eyebrow" id="gameResultReason">Game over</p>
             <h2 id="gameResultTitle">Accuracy Analysis</h2>
@@ -526,8 +527,8 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="config/sounds.js?v=2026-08-10-checkmate-reveal-v1"></script>
+    <script src="config/sounds.js?v=2026-08-10-result-close-v1"></script>
     <script src="pieces.js"></script>
-    <script src="app.js?v=2026-08-10-checkmate-reveal-v1"></script>
+    <script src="app.js?v=2026-08-10-result-close-v1"></script>
   </body>
 </html>

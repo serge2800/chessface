@@ -2863,6 +2863,7 @@ body[data-board-theme="wood"] {
 }
 
 .game-result-card {
+  position: relative;
   width: min(1120px, calc(100vw - 24px));
   max-height: calc(100vh - 48px);
   overflow: auto;
@@ -2875,6 +2876,32 @@ body[data-board-theme="wood"] {
     radial-gradient(circle at 82% 20%, rgba(242, 198, 109, 0.15), transparent 28%),
     rgba(7, 10, 13, 0.98);
   box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48);
+}
+
+.game-result-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin: -4px -4px 4px 8px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.44);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.game-result-close:hover {
+  border-color: rgba(242, 198, 109, 0.5);
+  color: var(--gold);
 }
 
 .game-result-card h2 {
