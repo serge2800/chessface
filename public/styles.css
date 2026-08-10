@@ -4085,7 +4085,7 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
   top: auto;
-  bottom: 58px;
+  bottom: 63px;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top img,
