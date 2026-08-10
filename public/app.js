@@ -166,8 +166,8 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-08-10-sound-cleanup-v1";
-const STYLE_VERSION = "2026-08-10-sound-cleanup-v1";
+const APP_VERSION = "2026-08-10-offer-draw-direct-v1";
+const STYLE_VERSION = "2026-08-10-offer-draw-direct-v1";
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -525,7 +525,6 @@ declineChallengeButton.addEventListener("click", () => {
 cancelSeekButton.addEventListener("click", leaveQueue);
 cancelSeekPanelButton.addEventListener("click", leaveQueue);
 document.querySelector("#offerDrawButton").addEventListener("click", () => {
-  if (settings.confirmActions && !window.confirm("Offer a draw?")) return;
   socket.emit("game:draw:offer");
 });
 document.querySelector("#abortGameButton").addEventListener("click", () => {
