@@ -4079,13 +4079,13 @@ body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bot
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top {
-  top: 24px;
+  top: 21px;
   bottom: auto;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-bottom {
   top: auto;
-  bottom: 48px;
+  bottom: 58px;
 }
 
 body.in-game .game-layout:not(.team-game-layout) .board-wrap > .board-player-top img,
