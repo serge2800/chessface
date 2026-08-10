@@ -187,12 +187,6 @@ window.ChessFaceSounds = (() => {
       "file": "/assets/sounds/General%20Memes%20and%20Reactions/I_wonder_whats_for_dinner.mp3"
     },
     {
-      "id": "general-memes-and-reactions-im-gay-mp3",
-      "label": "Im Gay",
-      "category": "General Memes and Reactions",
-      "file": "/assets/sounds/General%20Memes%20and%20Reactions/im_gay.mp3"
-    },
-    {
       "id": "general-memes-and-reactions-my-name-is-jeff-mp3",
       "label": "My Name Is Jeff",
       "category": "General Memes and Reactions",
