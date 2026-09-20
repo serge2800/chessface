@@ -85,6 +85,7 @@ const emojiPanel = document.querySelector("#emojiPanel");
 const chatStatus = document.querySelector("#chatStatus");
 const teamRoster = document.querySelector("#teamRoster");
 const profileButton = document.querySelector("#profileButton");
+const dashboardButton = document.querySelector("#dashboardButton");
 const logoutButton = document.querySelector("#logoutButton");
 const settingsButton = document.querySelector("#settingsButton");
 const settingsModal = document.querySelector("#settingsModal");
@@ -174,7 +175,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-safari-sidebar-targets-v1";
+const APP_VERSION = "2026-09-21-finished-dashboard-v1";
 const STYLE_VERSION = "2026-09-21-safari-sidebar-targets-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -721,6 +722,7 @@ function openProfile(event) {
 }
 
 profileButton.addEventListener("click", openProfile);
+dashboardButton?.addEventListener("click", resetToLobby);
 logoutButton.addEventListener("click", logout);
 if (settingsButton && settingsModal) {
   settingsButton.addEventListener("click", () => {
@@ -1326,6 +1328,7 @@ function renderGame(game) {
   statusTitle.textContent = game.status === "playing"
     ? `${game.timeControl}${game.kind === "team" ? " team" : ""} game`
     : "Game over";
+  dashboardButton?.classList.toggle("hidden", game.status !== "finished");
   gameStatus.textContent = statusText(game);
   playerColor.textContent = playerTurnText(game);
   renderBoardPlayers(game);
@@ -4672,6 +4675,7 @@ function resetToLobby() {
   document.body.classList.remove("in-game");
   gameLayout.classList.add("hidden");
   lobby.classList.remove("hidden");
+  dashboardButton?.classList.add("hidden");
   statusTitle.textContent = "Choose a time control";
 }
 
