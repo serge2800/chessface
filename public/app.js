@@ -170,8 +170,10 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-08-10-knights-left-v1";
-const STYLE_VERSION = "2026-08-10-knights-left-v1";
+const APP_VERSION = "2026-09-20-safari-board-v1";
+const STYLE_VERSION = "2026-09-20-safari-board-v1";
+const IS_SAFARI = /Safari/i.test(navigator.userAgent)
+  && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
 const MEDIAPIPE_FACE_MESH_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 const MEDIAPIPE_DRAWING_UTILS_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js";
@@ -251,6 +253,8 @@ let selectedSquare;
 let pendingPremove = null;
 let playingPremove = false;
 let dragMove;
+let nativeSafariDragFrom = null;
+let suppressSafariSquareClickUntil = 0;
 let noticeTimer;
 let rawLocalStream;
 let localStream;
@@ -2562,9 +2566,20 @@ function renderBoard(fen, color) {
       square.dataset.square = squareName;
       square.dataset.file = file;
       square.dataset.rank = rank;
-      square.draggable = false;
+      square.draggable = Boolean(IS_SAFARI && pieceAt[squareName]);
       if (pieceAt[squareName]) square.append(renderPieceImage(pieceAt[squareName]));
-      square.addEventListener("pointerdown", (event) => startPieceDrag(event, squareName, pieceAt[squareName]));
+      if (IS_SAFARI) {
+        square.addEventListener("click", () => {
+          if (Date.now() < suppressSafariSquareClickUntil) return;
+          handleSquareClick(squareName, pieceAt[squareName]);
+        });
+        square.addEventListener("dragstart", (event) => startNativeSafariDrag(event, squareName, pieceAt[squareName]));
+        square.addEventListener("dragover", dragNativeSafariPieceOver);
+        square.addEventListener("drop", (event) => dropNativeSafariPiece(event, squareName));
+        square.addEventListener("dragend", finishNativeSafariDrag);
+      } else {
+        square.addEventListener("pointerdown", (event) => startPieceDrag(event, squareName, pieceAt[squareName]));
+      }
       board.appendChild(square);
     }
   }
@@ -2942,6 +2957,56 @@ function startPieceDrag(event, square, piece) {
   document.addEventListener("pointermove", dragPiece, true);
   document.addEventListener("pointerup", dropPiece, true);
   document.addEventListener("pointercancel", cancelPieceDrag, true);
+}
+
+function startNativeSafariDrag(event, square, piece) {
+  if (!currentGame || currentGame.status !== "playing" || !piece || isViewingHistoricalPosition()) {
+    event.preventDefault();
+    return;
+  }
+  if (!canMovePiece(piece)) {
+    event.preventDefault();
+    showMoveBlockedNotice(piece);
+    return;
+  }
+
+  nativeSafariDragFrom = square;
+  selectedSquare = square;
+  event.currentTarget.classList.add("dragging-source", "selected");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", square);
+  const pieceImage = event.currentTarget.querySelector(".piece-img");
+  if (pieceImage) event.dataTransfer.setDragImage(pieceImage, pieceImage.clientWidth / 2, pieceImage.clientHeight / 2);
+}
+
+function dragNativeSafariPieceOver(event) {
+  if (!nativeSafariDragFrom) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  document.querySelectorAll(".square.drag-over").forEach((item) => item.classList.remove("drag-over"));
+  event.currentTarget.classList.add("drag-over");
+}
+
+function dropNativeSafariPiece(event, targetSquare) {
+  if (!nativeSafariDragFrom) return;
+  event.preventDefault();
+  const from = nativeSafariDragFrom;
+  suppressSafariSquareClickUntil = Date.now() + 350;
+  finishNativeSafariDrag();
+  if (targetSquare === from) {
+    selectedSquare = from;
+    renderCurrentBoard();
+    return;
+  }
+  selectedSquare = null;
+  makeMove(from, targetSquare);
+}
+
+function finishNativeSafariDrag() {
+  nativeSafariDragFrom = null;
+  document.querySelectorAll(".square.dragging-source, .square.drag-over").forEach((item) => {
+    item.classList.remove("dragging-source", "drag-over");
+  });
 }
 
 function dragPiece(event) {
