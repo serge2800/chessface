@@ -2380,7 +2380,23 @@ input[type="file"] {
 }
 
 .board-side-actions {
+  grid-auto-rows: minmax(44px, auto);
   margin-top: 0;
+}
+
+.board-side-actions button {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  touch-action: manipulation;
+  -webkit-transform: translateZ(0);
+}
+
+.board-side-actions #addOpponentButton {
+  z-index: 2;
+  margin-top: 8px;
 }
 
 .board-side-controls .board-side-actions,
