@@ -171,7 +171,7 @@ const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
 const APP_VERSION = "2026-09-20-safari-board-v1";
-const STYLE_VERSION = "2026-09-20-safari-board-v1";
+const STYLE_VERSION = "2026-09-21-black-control-lines-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
 const LIVEKIT_CLIENT_URL = "https://cdn.jsdelivr.net/npm/livekit-client/+esm";
