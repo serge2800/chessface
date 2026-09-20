@@ -341,6 +341,14 @@ function readUsers() {
       user.friendsCount = user.friends.length;
       changed = true;
     }
+    if (!user.preferences || typeof user.preferences !== "object") {
+      user.preferences = {};
+      changed = true;
+    }
+    if (typeof user.preferences.faceMeshAlwaysOn !== "boolean") {
+      user.preferences.faceMeshAlwaysOn = false;
+      changed = true;
+    }
   }
   if (changed) writeUsers(users);
   return users;
@@ -383,7 +391,10 @@ function publicUser(user) {
     joinedAt: user.createdAt,
     online,
     isGuest: Boolean(user.isGuest),
-    avatarUrl: user.avatarUrl || "/default-avatar.svg"
+    avatarUrl: user.avatarUrl || "/default-avatar.svg",
+    preferences: {
+      faceMeshAlwaysOn: Boolean(user.preferences?.faceMeshAlwaysOn)
+    }
   };
 }
 
@@ -1567,6 +1578,18 @@ app.post("/api/resend-verification", async (req, res) => {
 
 app.get("/api/me", requireSession, (req, res) => {
   res.json({ user: publicUser(req.user), timeControls: TIME_CONTROLS });
+});
+
+app.post("/api/settings", requireSession, requireRegisteredUser, (req, res) => {
+  const users = readUsers();
+  const user = users.find((item) => item.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "Account not found." });
+  user.preferences = {
+    ...(user.preferences || {}),
+    faceMeshAlwaysOn: Boolean(req.body?.faceMeshAlwaysOn)
+  };
+  writeUsers(users);
+  res.json({ preferences: publicUser(user).preferences });
 });
 
 app.get("/api/rankings", (_req, res) => {

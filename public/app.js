@@ -170,7 +170,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-safari-face-mesh-v1";
+const APP_VERSION = "2026-09-21-account-face-mesh-v1";
 const STYLE_VERSION = "2026-09-21-black-control-lines-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -816,12 +816,20 @@ function showApp({ refreshOnly = false } = {}) {
   document.querySelector("#myCountryFlag").textContent = flagEmoji(me.countryCode);
   document.querySelector("#myName").textContent = me.username;
   document.querySelector("#myRating").textContent = `${me.rating} rating · ${me.gamesPlayed || 0} games`;
+  applyAccountSettings();
   if (!refreshOnly || !socket) connectSocket();
   const pendingNotice = sessionStorage.getItem("chessface:notice");
   if (pendingNotice) {
     sessionStorage.removeItem("chessface:notice");
     showNotice(pendingNotice);
   }
+}
+
+function applyAccountSettings() {
+  if (typeof me?.preferences?.faceMeshAlwaysOn !== "boolean") return;
+  settings.faceMeshAlwaysOn = me.preferences.faceMeshAlwaysOn;
+  saveSettings();
+  syncSettingsControls();
 }
 
 function loadCachedUser() {
@@ -5052,6 +5060,29 @@ function updateSettingsFromControls() {
   saveSettings();
   applySettings();
   if (previousFaceMeshAlwaysOn !== Boolean(settings.faceMeshAlwaysOn)) applyFaceMeshDefaultDuringGame();
+  if (previousFaceMeshAlwaysOn !== Boolean(settings.faceMeshAlwaysOn)) saveAccountFaceMeshSetting();
+}
+
+async function saveAccountFaceMeshSetting() {
+  if (!token || me?.isGuest) return;
+  const faceMeshAlwaysOn = Boolean(settings.faceMeshAlwaysOn);
+  try {
+    const response = await fetch("/api/settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ faceMeshAlwaysOn })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Settings could not be saved.");
+    me.preferences = data.preferences;
+    saveCachedUser(me);
+  } catch (error) {
+    console.warn("[ChessFace] Account setting could not be saved:", error);
+    showNotice("Face mesh preference could not be saved to your account.");
+  }
 }
 
 function applySettings() {
