@@ -177,7 +177,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-match-entry-recovery-v1";
+const APP_VERSION = "2026-09-21-resign-any-turn-v1";
 const STYLE_VERSION = "2026-09-21-team-mode-construction-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -1386,8 +1386,8 @@ function renderGame(game) {
   updateTurnRandomSoundButton(game, myTurn);
   updateTakebackControls(game, myTurn);
   updateTurnStatusButton(game, myTurn);
-  document.querySelector("#resignButton").disabled = !myTurn;
-  document.querySelector("#resignButton").title = myTurn ? "" : "Only the player whose turn it is can resign.";
+  document.querySelector("#resignButton").disabled = game.status !== "playing";
+  document.querySelector("#resignButton").title = "";
   const addOpponentButton = document.querySelector("#addOpponentButton");
   const opponent = opponentForGame(game);
   addOpponentButton.disabled = game.status !== "playing" || game.kind === "team" || isGuestPlayer(opponent);

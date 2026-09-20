@@ -2322,11 +2322,7 @@ io.on("connection", (socket) => {
     settleGameClock(game);
     if (game.status !== "playing") return;
     const color = colorForUser(game, socket.user.id);
-    const expectedColor = game.chess.turn() === "w" ? "white" : "black";
-    if (!color || color !== expectedColor) return socket.emit("error:message", "Only the player whose turn it is can resign.");
-    if (game.kind === "team" && currentTeamMover(game)?.id !== socket.user.id) {
-      return socket.emit("error:message", `Only ${currentTeamMover(game)?.username || "the active teammate"} can resign right now.`);
-    }
+    if (!color) return;
     const result = color === "white" ? "black" : "white";
     finishGame(game, result, "resignation");
   });
