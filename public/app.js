@@ -170,7 +170,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-20-safari-board-v1";
+const APP_VERSION = "2026-09-21-safari-face-mesh-v1";
 const STYLE_VERSION = "2026-09-21-black-control-lines-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -4249,9 +4249,13 @@ async function buildFaceMeshStream(sourceStream) {
   const { FaceMesh } = await loadFaceMeshModule();
   const sourceVideo = document.createElement("video");
   sourceVideo.muted = true;
+  sourceVideo.autoplay = true;
   sourceVideo.playsInline = true;
+  sourceVideo.setAttribute("playsinline", "");
+  sourceVideo.setAttribute("webkit-playsinline", "");
   sourceVideo.srcObject = new MediaStream([sourceVideoTrack]);
-  await sourceVideo.play().catch(() => {});
+  if (IS_SAFARI) mountSafariMediaProcessor(sourceVideo);
+  await sourceVideo.play();
   await waitForVideoReady(sourceVideo);
 
   const settings = sourceVideoTrack.getSettings?.() || {};
@@ -4260,8 +4264,11 @@ async function buildFaceMeshStream(sourceStream) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
+  if (IS_SAFARI) mountSafariMediaProcessor(canvas);
   const context = canvas.getContext("2d", { alpha: false });
-  const outputStream = canvas.captureStream(VIDEO_FRAME_RATE);
+  context.drawImage(sourceVideo, 0, 0, width, height);
+  const outputStream = canvas.captureStream(IS_SAFARI ? 0 : VIDEO_FRAME_RATE);
+  const outputVideoTrack = outputStream.getVideoTracks()[0];
   sourceStream.getAudioTracks().forEach((track) => outputStream.addTrack(track));
   filteredLocalStream = outputStream;
 
@@ -4297,6 +4304,7 @@ async function buildFaceMeshStream(sourceStream) {
         faceMeshFrameInFlight = false;
       });
     }
+    outputVideoTrack?.requestFrame?.();
     faceMeshRenderer.frame = requestAnimationFrame(render);
   };
   faceMeshRenderer = {
@@ -4306,10 +4314,27 @@ async function buildFaceMeshStream(sourceStream) {
       cancelAnimationFrame(faceMeshRenderer?.frame);
       sourceVideo.pause?.();
       sourceVideo.srcObject = null;
+      sourceVideo.remove();
+      canvas.remove();
     }
   };
   render();
   return outputStream;
+}
+
+function mountSafariMediaProcessor(element) {
+  element.setAttribute("aria-hidden", "true");
+  Object.assign(element.style, {
+    position: "fixed",
+    width: "1px",
+    height: "1px",
+    left: "0",
+    bottom: "0",
+    opacity: "0.001",
+    pointerEvents: "none",
+    zIndex: "-1"
+  });
+  document.body.appendChild(element);
 }
 
 async function restartMediaPipeline() {
@@ -4371,7 +4396,11 @@ function updateFaceMeshButton(loading = false) {
 
 async function replaceOutgoingVideoTrack(videoTrack) {
   if (!videoTrack) return;
-  videoTrack.contentHint = "motion";
+  try {
+    videoTrack.contentHint = "motion";
+  } catch {
+    // Older Safari versions expose contentHint as read-only.
+  }
   if (liveKitRoom?.localParticipant) {
     await replaceLiveKitVideoTrack(videoTrack);
   }
