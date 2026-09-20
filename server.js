@@ -21,6 +21,7 @@ const UPLOAD_DIR = path.join(__dirname, "uploads");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const GAMES_FILE = path.join(DATA_DIR, "games.json");
 const MESSAGES_FILE = path.join(DATA_DIR, "messages.json");
+const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const DESKTOP_SOUND_SOURCE_DIR = path.join(process.env.HOME || __dirname, "Desktop", "mps sounds");
 const BUNDLED_SOUND_SOURCE_DIR = path.join(__dirname, "public", "assets", "sounds");
 const SOUND_SOURCE_DIR = process.env.CHESSFACE_SOUNDS_DIR
@@ -29,6 +30,7 @@ const SOUND_EXTENSIONS = new Set([".aac", ".flac", ".m4a", ".mp3", ".ogg", ".wav
 const RANDOM_TURN_SOUND_LOCK_MS = 8500;
 const TAKEBACK_REQUEST_LIMIT = 5;
 const EMAIL_TOKEN_HOURS = 24;
+const SESSION_DAYS = 30;
 const START_RATING = 1000;
 const START_RD = 350;
 const MIN_RD = 35;
@@ -68,6 +70,7 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "[]");
 if (!fs.existsSync(GAMES_FILE)) fs.writeFileSync(GAMES_FILE, "[]");
 if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, "[]");
+if (!fs.existsSync(SESSIONS_FILE)) fs.writeFileSync(SESSIONS_FILE, "[]");
 
 const app = express();
 const server = http.createServer(app);
@@ -81,7 +84,7 @@ const upload = multer({
   }
 });
 
-const sessions = new Map();
+const sessions = loadSessions();
 const sockets = new Map();
 const queues = new Map();
 const teamQueues = new Map();
@@ -410,6 +413,50 @@ function tokenHash(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+function loadSessions() {
+  try {
+    const now = Date.now();
+    const records = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf8"));
+    return new Map(records
+      .filter((record) => record?.tokenHash && record?.userId && Number(record.expiresAt) > now)
+      .map((record) => [record.tokenHash, { userId: record.userId, expiresAt: Number(record.expiresAt), persistent: true }]));
+  } catch {
+    return new Map();
+  }
+}
+
+function writeSessions() {
+  const now = Date.now();
+  const records = [...sessions.entries()]
+    .filter(([, session]) => session.persistent && session.expiresAt > now)
+    .map(([hashedToken, session]) => ({ tokenHash: hashedToken, userId: session.userId, expiresAt: session.expiresAt }));
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(records, null, 2));
+}
+
+function createSession(user) {
+  const token = uuid();
+  sessions.set(tokenHash(token), {
+    userId: user.id,
+    expiresAt: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
+    persistent: !user.isGuest
+  });
+  if (!user.isGuest) writeSessions();
+  return token;
+}
+
+function sessionUserId(token) {
+  if (!token) return null;
+  const key = tokenHash(token);
+  const session = sessions.get(key);
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) {
+    sessions.delete(key);
+    writeSessions();
+    return null;
+  }
+  return session.userId;
+}
+
 function appBaseUrl(req) {
   return (process.env.APP_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
 }
@@ -573,7 +620,7 @@ function ageFromDate(dateString) {
 
 function requireSession(req, res, next) {
   const token = req.headers.authorization?.replace("Bearer ", "");
-  const userId = sessions.get(token);
+  const userId = sessionUserId(token);
   if (!userId) return res.status(401).json({ error: "Please sign in first." });
   const user = readUsers().find((item) => item.id === userId);
   if (!user) return res.status(401).json({ error: "Session expired." });
@@ -1466,8 +1513,7 @@ app.post("/api/signup", upload.single("avatar"), async (req, res) => {
   users.push(user);
   if (!emailVerificationEnabled()) {
     writeUsers(users);
-    const token = uuid();
-    sessions.set(token, user.id);
+    const token = createSession(user);
     return res.json({
       token,
       user: publicUser(user),
@@ -1512,8 +1558,7 @@ app.post("/api/guest", (_req, res) => {
   };
   users.push(user);
   writeUsers(users);
-  const token = uuid();
-  sessions.set(token, user.id);
+  const token = createSession(user);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -1535,8 +1580,7 @@ app.post("/api/login", async (req, res) => {
     return res.status(403).json({ error: "Please confirm your email before logging in." });
     }
   }
-  const token = uuid();
-  sessions.set(token, user.id);
+  const token = createSession(user);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -1828,7 +1872,7 @@ app.post("/api/messages/:friendId", requireSession, requireRegisteredUser, (req,
 });
 
 io.use((socket, next) => {
-  const userId = sessions.get(socket.handshake.auth?.token);
+  const userId = sessionUserId(socket.handshake.auth?.token);
   if (!userId) return next(new Error("Unauthorized"));
   const user = readUsers().find((item) => item.id === userId);
   if (!user) return next(new Error("Unauthorized"));

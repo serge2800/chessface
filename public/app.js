@@ -177,7 +177,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-safari-first-move-v1";
+const APP_VERSION = "2026-09-21-persistent-sessions-v1";
 const STYLE_VERSION = "2026-09-21-team-mode-construction-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -799,12 +799,22 @@ async function boot() {
   }
   try {
     const response = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) throw new Error("Expired");
+    if (response.status === 401 || response.status === 403) {
+      const error = new Error("Expired");
+      error.sessionExpired = true;
+      throw error;
+    }
+    if (!response.ok) throw new Error("ChessFace is temporarily unavailable.");
     const data = await response.json();
     me = data.user;
     saveCachedUser(me);
     showApp({ refreshOnly: appShown });
-  } catch {
+  } catch (error) {
+    if (!error.sessionExpired) {
+      if (appShown) showNotice("Connection interrupted. Your login is still saved.");
+      else authNotice.textContent = "Could not connect yet. Refresh when the server is available.";
+      return;
+    }
     localStorage.removeItem("chessface:token");
     localStorage.removeItem("chessface:user");
     token = null;
