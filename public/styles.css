@@ -3401,6 +3401,10 @@ body[data-board-theme="wood"] {
   min-height: 44px;
 }
 
+.construction-modal-actions {
+  grid-template-columns: 1fr;
+}
+
 .board-notice {
   position: fixed;
   top: 50%;

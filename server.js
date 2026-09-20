@@ -1901,14 +1901,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("teamQueue:join", (timeControl) => {
-    joinTeamQueue(socket, timeControl);
+    socket.emit("error:message", "Four-player team games are under construction.");
   });
 
   socket.on("openChallenge:join", ({ mode, timeControl, hostSocketId }) => {
     if (!TIME_CONTROLS[timeControl]) return socket.emit("error:message", "Unknown time control.");
     const state = clearFinishedGameAssignment(socket.id);
     if (!state || state.gameId) return;
-    if (mode === "team") return joinTeamQueue(socket, timeControl);
+    if (mode === "team") return socket.emit("error:message", "Four-player team games are under construction.");
 
     const queue = queues.get(timeControl);
     if (!queue || !queue.has(hostSocketId) || hostSocketId === socket.id) {
