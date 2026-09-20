@@ -177,7 +177,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-persistent-sessions-v1";
+const APP_VERSION = "2026-09-21-match-entry-recovery-v1";
 const STYLE_VERSION = "2026-09-21-team-mode-construction-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -208,6 +208,7 @@ let me;
 let appShown = false;
 let selectedTime = "5+0";
 let currentGame;
+let gameEntryPromise = null;
 let pendingCheckmateResultKey = "";
 let pendingCheckmateResultTimer = null;
 let pendingCheckmateCelebrationTimer = null;
@@ -916,12 +917,19 @@ function connectSocket() {
     challengeBox.classList.remove("hidden");
   });
   socket.on("rematch:requested", showRematchRequest);
-  socket.on("match:found", (game) => enterGame(game, { intro: true }));
+  socket.on("match:found", (game) => openGame(game, { intro: true }));
   socket.on("active-game:found", async (game) => {
     showNotice("Active game restored.");
-    await enterGame(game);
+    await openGame(game);
   });
-  socket.on("game:update", renderGame);
+  socket.on("game:update", (game) => {
+    const gameViewIsOpen = document.body.classList.contains("in-game") && !gameLayout.classList.contains("hidden");
+    if (!gameViewIsOpen && game.status === "playing") {
+      openGame(game);
+      return;
+    }
+    renderGame(game);
+  });
   socket.on("takeback:notice", ({ message, board, duration }) => {
     if (board) showBoardMessage(message, duration || 1000);
     else showNotice(message);
@@ -993,6 +1001,19 @@ function handleSocketConnectError(error) {
   }
   if (message.toLowerCase().includes("xhr post error")) return;
   showNotice(message || "Connection interrupted.");
+}
+
+function openGame(game, options = {}) {
+  if (gameEntryPromise) return gameEntryPromise;
+  gameEntryPromise = enterGame(game, options)
+    .catch((error) => {
+      console.warn("[ChessFace] Could not open game:", error);
+      showNotice("The game started, but the board could not open. Refresh to restore it.");
+    })
+    .finally(() => {
+      gameEntryPromise = null;
+    });
+  return gameEntryPromise;
 }
 
 async function enterGame(game, { intro = false } = {}) {
