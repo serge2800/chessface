@@ -1774,11 +1774,14 @@ app.delete("/api/friends/requests/:otherId", requireSession, requireRegisteredUs
   const me = users.find((user) => user.id === req.user.id);
   const other = users.find((user) => user.id === req.params.otherId);
   if (!other) return res.status(404).json({ error: "Player was not found." });
+  const declinedIncomingRequest = (me.incomingFriendRequests || []).includes(other.id);
   me.incomingFriendRequests = (me.incomingFriendRequests || []).filter((id) => id !== other.id);
   me.outgoingFriendRequests = (me.outgoingFriendRequests || []).filter((id) => id !== other.id);
   other.incomingFriendRequests = (other.incomingFriendRequests || []).filter((id) => id !== me.id);
   other.outgoingFriendRequests = (other.outgoingFriendRequests || []).filter((id) => id !== me.id);
   writeUsers(users);
+  const otherSocket = declinedIncomingRequest ? socketForUser(other.id) : null;
+  if (otherSocket) otherSocket.emit("friend:declined", { by: publicUser(me) });
   res.json({ user: publicUser(me) });
 });
 

@@ -131,6 +131,10 @@ const rematchRequestTitle = document.querySelector("#rematchRequestTitle");
 const rematchRequestText = document.querySelector("#rematchRequestText");
 const acceptRematchButton = document.querySelector("#acceptRematchButton");
 const declineRematchButton = document.querySelector("#declineRematchButton");
+const friendRequestModal = document.querySelector("#friendRequestModal");
+const friendRequestTitle = document.querySelector("#friendRequestTitle");
+const acceptFriendRequestButton = document.querySelector("#acceptFriendRequestButton");
+const declineFriendRequestButton = document.querySelector("#declineFriendRequestButton");
 const accuracyAnalysisStatus = document.querySelector("#accuracyAnalysisStatus");
 const accuracyAnalysisPanel = document.querySelector("#accuracyAnalysisPanel");
 const checkmateCelebration = document.querySelector("#checkmateCelebration");
@@ -170,7 +174,7 @@ const VIDEO_OUTPUT_WIDTH = 320;
 const VIDEO_OUTPUT_HEIGHT = 240;
 const VIDEO_FRAME_RATE = 12;
 const VIDEO_MAX_BITRATE = 280000;
-const APP_VERSION = "2026-09-21-account-face-mesh-v1";
+const APP_VERSION = "2026-09-21-friend-request-popup-v1";
 const STYLE_VERSION = "2026-09-21-black-control-lines-v1";
 const IS_SAFARI = /Safari/i.test(navigator.userAgent)
   && !/(Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR)/i.test(navigator.userAgent);
@@ -211,6 +215,7 @@ let postGameVideoTimer;
 let postGameResultReopenTimer;
 let postGameTimeControl = "5+0";
 let pendingRematchGameId = null;
+let pendingFriendRequest = null;
 let liveEvalWorker = null;
 let liveEvalReadyPromise = null;
 let liveEvalCleanup = null;
@@ -538,6 +543,8 @@ declineChallengeButton.addEventListener("click", () => {
   challengeBox.classList.add("hidden");
   pendingChallengeId = null;
 });
+acceptFriendRequestButton?.addEventListener("click", () => respondToFriendRequest(true));
+declineFriendRequestButton?.addEventListener("click", () => respondToFriendRequest(false));
 cancelSeekButton.addEventListener("click", leaveQueue);
 cancelSeekPanelButton.addEventListener("click", leaveQueue);
 document.querySelector("#offerDrawButton").addEventListener("click", () => {
@@ -884,8 +891,9 @@ function connectSocket() {
     openChallenges = payload || { normal: [], team: [] };
     renderOpenChallenges();
   });
-  socket.on("friend:request", ({ from }) => showNotice(`${from.username} sent you a friend request. Open Friends to accept.`));
+  socket.on("friend:request", ({ from }) => showFriendRequest(from));
   socket.on("friend:accepted", ({ by }) => showNotice(`${by.username} accepted your friend request.`));
+  socket.on("friend:declined", ({ by }) => showNotice(`${by.username} declined your friend request.`));
   socket.on("challenge:sent", ({ to, timeControl }) => showNotice(`Challenge sent to ${to} for ${timeControl}.`));
   socket.on("challenge:declined", ({ from }) => showNotice(`${from} declined your challenge.`));
   socket.on("challenge:received", ({ id, from, timeControl }) => {
@@ -928,6 +936,40 @@ function connectSocket() {
     renderVideoControls(currentGame);
     await startMediaAndPeer();
   });
+}
+
+function showFriendRequest(from) {
+  if (!from?.id) return;
+  pendingFriendRequest = from;
+  friendRequestTitle.textContent = `${from.username} sent you a friend request`;
+  friendRequestModal?.classList.remove("hidden");
+}
+
+async function respondToFriendRequest(accept) {
+  const requester = pendingFriendRequest;
+  if (!requester?.id) return;
+  acceptFriendRequestButton.disabled = true;
+  declineFriendRequestButton.disabled = true;
+  try {
+    const response = await fetch(`/api/friends/requests/${encodeURIComponent(requester.id)}${accept ? "/accept" : ""}`, {
+      method: accept ? "POST" : "DELETE",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Friend request could not be updated.");
+    if (data.user) {
+      me = data.user;
+      saveCachedUser(me);
+    }
+    showNotice(accept ? `${requester.username} is now your friend.` : `Friend request from ${requester.username} declined.`);
+    friendRequestModal?.classList.add("hidden");
+    pendingFriendRequest = null;
+  } catch (error) {
+    showNotice(error.message || "Friend request could not be updated.");
+  } finally {
+    acceptFriendRequestButton.disabled = false;
+    declineFriendRequestButton.disabled = false;
+  }
 }
 
 function handleSocketConnectError(error) {

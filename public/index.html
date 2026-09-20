@@ -423,6 +423,18 @@
         </div>
       </section>
 
+      <section class="rematch-request-modal hidden" id="friendRequestModal" aria-label="Friend request" aria-modal="true" role="dialog">
+        <div class="rematch-request-card">
+          <p class="eyebrow">Friend request</p>
+          <h2 id="friendRequestTitle">Opponent sent you a friend request</h2>
+          <p>Would you like to add this player as a friend?</p>
+          <div class="rematch-request-actions">
+            <button type="button" class="primary" id="acceptFriendRequestButton">Accept</button>
+            <button type="button" class="ghost" id="declineFriendRequestButton">Decline</button>
+          </div>
+        </div>
+      </section>
+
       <section class="takeback-request-modal hidden" id="takebackRequestModal" aria-label="Takeback request" aria-modal="true" role="dialog">
         <div class="takeback-request-card">
           <p>Your opponent requests a takeback.</p>
@@ -529,6 +541,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="config/sounds.js?v=2026-08-10-knights-left-v1"></script>
     <script src="pieces.js?v=2026-08-10-knights-left-v1"></script>
-    <script src="app.js?v=2026-09-21-account-face-mesh-v1"></script>
+    <script src="app.js?v=2026-09-21-friend-request-popup-v1"></script>
   </body>
 </html>
